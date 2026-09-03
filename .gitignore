@@ -1,0 +1,14 @@
+# Python caches and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Generated medical images, previews, and trained weights
+data/synthetic/
+outputs/
+checkpoints/
+
+# Notebook and local environment files
+.ipynb_checkpoints/
+.env
+.venv/
