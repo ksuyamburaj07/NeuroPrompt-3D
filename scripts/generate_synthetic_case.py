@@ -1,10 +1,10 @@
-"""Generate the first complete synthetic NeuroPrompt-3D case."""
+"""Generate a four-modality synthetic NeuroPrompt-3D case."""
 
 from pathlib import Path
 
 from src.data.nifti import save_case
 from src.data.synthetic import create_synthetic_case
-from src.visualization.slices import save_orthogonal_preview
+from src.visualization.slices import save_multimodal_preview
 
 
 def main() -> None:
@@ -18,7 +18,7 @@ def main() -> None:
         project_root / "data" / "synthetic",
         case_id,
     )
-    preview_path = save_orthogonal_preview(
+    preview_path = save_multimodal_preview(
         mri,
         mask,
         project_root / "outputs" / f"{case_id}_preview.png",
