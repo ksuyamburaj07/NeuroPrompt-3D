@@ -68,6 +68,49 @@ Run the focused synthetic-file tests with:
 python -m pytest -q tests/test_multimodal_nifti.py
 ```
 
+## Milestone 3 Step 3: real BraTS case validation
+
+The multimodal loader has now been validated on one real case from the
+BraTS 2024 Adult Glioma Post-Treatment training dataset.
+
+Real medical-image data is intentionally stored outside this Git repository
+under `/data/Datasets` and is not redistributed with NeuroPrompt-3D.
+
+Dataset checkpoint:
+
+- archive: `BraTS2024-BraTS-GLI-TrainingData.zip`
+- Synapse entity: `syn60086071`
+- verified release: version 2
+- verified MD5: `1d910b17d6cd32e38aa6296b8dfb7c77`
+- first inspected case: `BraTS-GLI-03011-101`
+
+BraTS modality names are mapped into the shared NeuroPrompt-3D contract as:
+
+- `t1n` -> `T1`
+- `t1c` -> `T1ce`
+- `t2w` -> `T2`
+- `t2f` -> `FLAIR`
+
+For the inspected case, all four MRI modalities and the segmentation share:
+
+- NIfTI shape: `(182, 218, 182)`
+- voxel spacing: `(1.0, 1.0, 1.0)` mm
+- orientation codes: `L`, `A`, `S`
+- matching MRI/segmentation affine geometry
+
+The existing `load_multimodal_case` function successfully loads the real
+case as a contiguous `torch.float32` tensor with shape
+`[4, 182, 218, 182]`.
+
+The original segmentation is preserved. The inspected case contains label
+values `0`, `1`, `2`, and `3`. A binary whole-tumor target can later be
+derived as all nonzero segmentation voxels while retaining the original
+multiclass labels separately.
+
+Raw intensity statistics were also inspected independently for T1, T1ce,
+T2, and FLAIR. No normalization has been applied yet. Foreground
+per-modality normalization is the next preprocessing milestone.
+
 ## Run it
 
 From the project root, activate the existing environment and run the tests:

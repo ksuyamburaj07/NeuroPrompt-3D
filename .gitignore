@@ -12,3 +12,15 @@ checkpoints/
 .ipynb_checkpoints/
 .env
 .venv/
+
+# Real medical-imaging data and model artifacts
+
+*.nii
+*.nii.gz
+*.mha
+*.mhd
+*.nrrd
+*.pt
+*.pth
+*.ckpt
+BraTS*.zip
