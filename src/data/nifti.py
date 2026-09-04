@@ -1,11 +1,13 @@
 """Save and load NeuroPrompt-3D cases in NIfTI format."""
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import nibabel as nib
 import numpy as np
 import torch
 
+from src.data.cases import ordered_modality_paths
 from src.data.modalities import MODALITY_NAMES
 
 
@@ -66,3 +68,37 @@ def load_case(
     mri = torch.from_numpy(mri_array).permute(3, 2, 1, 0).contiguous()
     mask = torch.from_numpy(mask_array).permute(2, 1, 0).contiguous()
     return mri, mask
+
+
+def load_multimodal_case(
+    paths_by_modality: Mapping[str, str | Path | None],
+) -> torch.Tensor:
+    """Load separate 3D NIfTI files as contiguous float32 [4, D, H, W].
+
+    Channels follow MODALITY_NAMES. Each file stores [X, Y, Z], so the
+    returned spatial axes are [Z, Y, X], matching load_case. Shapes must
+    match exactly; affines must match T1 with atol=1e-5 and rtol=0.
+    """
+    paths = ordered_modality_paths(paths_by_modality)
+    images = [nib.load(path) for path in paths]
+    reference = images[0]
+
+    for modality, image in zip(MODALITY_NAMES, images):
+        if len(image.shape) != 3:
+            raise ValueError(
+                f"{modality} NIfTI must be 3D [X, Y, Z]; got shape {image.shape}"
+            )
+        if image.shape != reference.shape:
+            raise ValueError(
+                f"{modality} NIfTI spatial shape {image.shape} must match "
+                f"{MODALITY_NAMES[0]} {reference.shape}"
+            )
+        if not np.allclose(image.affine, reference.affine, rtol=0, atol=1e-5):
+            raise ValueError(
+                f"{modality} NIfTI affine must match {MODALITY_NAMES[0]} "
+                "(atol=1e-5, rtol=0)"
+            )
+
+    arrays = [np.asarray(image.dataobj, dtype=np.float32) for image in images]
+    mri_array = np.stack(arrays, axis=0)
+    return torch.from_numpy(mri_array).permute(0, 3, 2, 1).contiguous()

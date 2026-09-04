@@ -31,8 +31,42 @@ At one spatial location `(d, h, w)`, `mri[:, d, h, w]` contains four MRI
 measurements while `mask[d, h, w]` contains one tumor/background label.
 
 In memory, the MRI uses `[C, D, H, W]`. The synthetic NIfTI file stores the
-same data as `[X, Y, Z, C]`. A later real-data loader can read separate BraTS
-modality files and stack them into this same four-channel memory layout.
+same data as `[X, Y, Z, C]`. Separate 3D modality files can now be loaded into
+this same four-channel memory layout.
+
+## Milestone 3 Step 2: separate NIfTI modalities
+
+`load_multimodal_case` uses the existing ordered case definition to load one
+file per modality. For example, given four files already on disk:
+
+```python
+from src.data.nifti import load_multimodal_case
+
+mri = load_multimodal_case({
+    "T1": "data/example/t1.nii.gz",
+    "T1ce": "data/example/t1ce.nii.gz",
+    "T2": "data/example/t2.nii.gz",
+    "FLAIR": "data/example/flair.nii.gz",
+})
+```
+
+Every file must be exactly 3D, including rejecting a singleton fourth axis.
+Spatial shapes must match exactly. Each affine must match T1 within an
+absolute tolerance of `1e-5` (`rtol=0`). Shape describes the voxel array;
+the affine maps its indices to physical coordinates, so both must agree.
+
+The result is a contiguous CPU `torch.float32` tensor in `[4, D, H, W]`
+order, with channels `T1`, `T1ce`, `T2`, `FLAIR` regardless of dictionary
+insertion order. File axes `[X, Y, Z]` become `[D, H, W] = [Z, Y, X]`:
+four `(6, 5, 4)` files produce a `(4, 4, 5, 6)` tensor. These labels describe
+array axes; loading does not reorient or resample the images. Intensities
+are read as float32 without normalization, and no mask file is required.
+
+Run the focused synthetic-file tests with:
+
+```bash
+python -m pytest -q tests/test_multimodal_nifti.py
+```
 
 ## Run it
 
