@@ -1,43 +1,226 @@
 # NeuroPrompt-3D
 
-NeuroPrompt-3D is being built as a testable 3D medical-image segmentation project.
+**NeuroPrompt-3D: Uncertainty-Aware Automatic Prompting for Robust 3D Brain MRI Tumor Segmentation**
+
+NeuroPrompt-3D is a research and educational prototype for exploring whether uncertainty-guided automatic prompts can improve 3D brain tumor segmentation.
+
+It is **not a medical diagnostic system** and is not intended for clinical use.
+
+## Project idea
+
+The main research pipeline is:
+
+```text
+Brain MRI
+    ↓
+Preprocessing
+    ↓
+Lightweight 3D U-Net
+    ↓
+Coarse tumor segmentation
+    ↓
+MC Dropout uncertainty estimation
+    ↓
+Uncertainty map
+    ↓
+Automatic point / optional box prompts
+    ↓
+Frozen SAM-Med3D
+    ↓
+Refined 3D tumor mask
+    ↓
+Postprocessing
+    ↓
+Dice / IoU / HD95 comparison
+```
+
+The central research question is:
+
+> Can uncertainty-guided automatic prompts improve the refinement of coarse 3D brain tumor segmentations?
+
+The first segmentation model will predict **binary whole tumor versus background**.
+
+The original multiclass BraTS segmentation labels are preserved so that multiclass experiments remain possible later.
+
+---
+
+## Current project status
+
+Completed so far:
+
+- deterministic synthetic 3D MRI generation;
+- binary synthetic tumor masks;
+- NIfTI save and load support;
+- correct NIfTI-to-PyTorch axis conversion;
+- axial, coronal, and sagittal visualization;
+- four-modality synthetic MRI generation;
+- shared T1 / T1ce / T2 / FLAIR modality contract;
+- strict real-case modality validation;
+- separate multimodal NIfTI loading;
+- real BraTS 2024 case validation;
+- MRI and segmentation geometry checks;
+- real tumor visualization;
+- per-modality foreground z-score normalization;
+- automated preprocessing tests.
+
+Current automated test suite:
+
+```text
+46 passed
+```
+
+---
+
+## MRI tensor convention
+
+NeuroPrompt-3D uses the following in-memory MRI layout:
+
+```text
+[C, D, H, W]
+```
+
+where:
+
+- `C` = MRI modality/channel;
+- `D` = depth;
+- `H` = height;
+- `W` = width.
+
+The shared modality order is:
+
+```text
+T1
+T1ce
+T2
+FLAIR
+```
+
+Therefore:
+
+```text
+channel 0 = T1
+channel 1 = T1ce
+channel 2 = T2
+channel 3 = FLAIR
+```
+
+For example:
+
+```text
+[4, 128, 128, 128]
+```
+
+means:
+
+- 4 MRI modalities;
+- 128 depth slices;
+- 128 pixels in height;
+- 128 pixels in width.
+
+At one spatial location `(d, h, w)`:
+
+```python
+mri[:, d, h, w]
+```
+
+contains four MRI intensity measurements from the same voxel location.
+
+---
+
+# Development milestones
+
+## Milestone 1: synthetic 3D MRI pipeline
+
+The first milestone established the basic 3D medical-imaging workflow before using real patient data.
+
+The project can:
+
+- generate deterministic synthetic 3D MRI volumes;
+- generate a binary tumor segmentation mask;
+- save MRI and segmentation volumes as NIfTI files;
+- load saved NIfTI files back into PyTorch;
+- preserve spatial values through save/load operations;
+- validate MRI and mask shapes;
+- display axial, coronal, and sagittal views;
+- overlay the tumor mask on the synthetic MRI;
+- verify the behavior with automated tests.
+
+This synthetic stage was used to understand the data pipeline safely before introducing real medical images.
+
+---
 
 ## Milestone 2: four-modality synthetic MRI
 
-The current pipeline can:
+The synthetic pipeline was extended to imitate a BraTS-style multimodal MRI case.
 
-- generate deterministic T1, T1ce, T2, and FLAIR-like 3D MRI volumes;
-- keep all four modalities aligned with one binary tumor-segmentation mask;
-- save the four channels together as a compressed 4D NIfTI file (`.nii.gz`);
-- load the files back into PyTorch without changing their values;
-- save a four-panel modality comparison with the same tumor overlay;
-- verify the pipeline with automated tests.
+The four modalities are:
+
+- T1;
+- T1ce;
+- T2;
+- FLAIR.
+
+All four synthetic modalities share the same spatial geometry and tumor mask while having different simulated contrast patterns.
 
 Tensor conventions:
 
-- MRI: `[channel, depth, height, width]`, `float32`
-- channel order: `T1`, `T1ce`, `T2`, `FLAIR`
-- mask: `[depth, height, width]`, `uint8`
-- mask labels: `0 = background`, `1 = tumor`
+- MRI: `[channel, depth, height, width]`, `float32`;
+- channel order: `T1`, `T1ce`, `T2`, `FLAIR`;
+- mask: `[depth, height, width]`, `uint8`;
+- mask labels: `0 = background`, `1 = tumor`.
 
-For example, `[4, 128, 128, 128]` means:
+In memory, MRI uses:
 
-- `4` MRI modalities, or four measurements at every voxel;
-- `128` depth slices;
-- `128` pixels in height;
-- `128` pixels in width.
+```text
+[C, D, H, W]
+```
 
-At one spatial location `(d, h, w)`, `mri[:, d, h, w]` contains four MRI
-measurements while `mask[d, h, w]` contains one tumor/background label.
+A synthetic four-modality NIfTI stores the corresponding data using NIfTI spatial ordering:
 
-In memory, the MRI uses `[C, D, H, W]`. The synthetic NIfTI file stores the
-same data as `[X, Y, Z, C]`. Separate 3D modality files can now be loaded into
-this same four-channel memory layout.
+```text
+[X, Y, Z, C]
+```
 
-## Milestone 3 Step 2: separate NIfTI modalities
+The loader converts it back into the shared NeuroPrompt-3D tensor convention.
 
-`load_multimodal_case` uses the existing ordered case definition to load one
-file per modality. For example, given four files already on disk:
+---
+
+## Milestone 3 Step 1: strict multimodal case definition
+
+`src/data/cases.py` defines how a real MRI case supplies its modality files.
+
+The function:
+
+```python
+ordered_modality_paths(...)
+```
+
+requires all four modalities:
+
+```text
+T1
+T1ce
+T2
+FLAIR
+```
+
+It:
+
+- rejects missing modalities;
+- rejects `None` paths;
+- rejects blank paths;
+- converts paths into `pathlib.Path` objects;
+- always returns paths in the shared modality order.
+
+This prevents accidental channel-order changes between cases.
+
+---
+
+## Milestone 3 Step 2: separate NIfTI modality loading
+
+`load_multimodal_case` loads four separate 3D NIfTI modality files into one PyTorch tensor.
+
+Example:
 
 ```python
 from src.data.nifti import load_multimodal_case
@@ -50,116 +233,384 @@ mri = load_multimodal_case({
 })
 ```
 
-Every file must be exactly 3D, including rejecting a singleton fourth axis.
-Spatial shapes must match exactly. Each affine must match T1 within an
-absolute tolerance of `1e-5` (`rtol=0`). Shape describes the voxel array;
-the affine maps its indices to physical coordinates, so both must agree.
+Each modality must be exactly 3D.
 
-The result is a contiguous CPU `torch.float32` tensor in `[4, D, H, W]`
-order, with channels `T1`, `T1ce`, `T2`, `FLAIR` regardless of dictionary
-insertion order. File axes `[X, Y, Z]` become `[D, H, W] = [Z, Y, X]`:
-four `(6, 5, 4)` files produce a `(4, 4, 5, 6)` tensor. These labels describe
-array axes; loading does not reorient or resample the images. Intensities
-are read as float32 without normalization, and no mask file is required.
+The loader validates:
 
+- number of spatial dimensions;
+- matching spatial shapes;
+- matching affine geometry.
+
+Affines must match T1 within:
+
+```text
+atol = 1e-5
+rtol = 0
+```
+
+NIfTI stores each separate modality as:
+
+```text
+[X, Y, Z]
+```
+
+NeuroPrompt-3D converts this into:
+
+```text
+[D, H, W] = [Z, Y, X]
+```
+
+and stacks the four modalities into:
+
+```text
+[4, D, H, W]
+```
+
+The result is a contiguous CPU:
+
+```text
+torch.float32
+```
+
+tensor.
+
+For example, four files with NIfTI shape:
+
+```text
+(6, 5, 4)
+```
+
+produce:
+
+```text
+(4, 4, 5, 6)
+```
+
+The loader does not currently reorient or resample images.
+
+It also does not normalize intensities during loading. Preprocessing is intentionally kept as a separate stage.
+
+Run the focused multimodal loader tests with:
+
+```bash
+python -m pytest -q tests/test_multimodal_nifti.py
+```
+
+---
 
 ## Milestone 3 Step 3: real BraTS case validation
 
-The multimodal loader has now been validated on one real case from the
-BraTS 2024 Adult Glioma Post-Treatment training dataset.
+The multimodal loader has been validated on a real case from the:
 
-Real medical-image data is intentionally stored outside this Git repository
-under `/data/Datasets` and is not redistributed with NeuroPrompt-3D.
+**BraTS 2024 Adult Glioma Post-Treatment training dataset.**
+
+Real medical-image data is intentionally stored outside the Git repository under:
+
+```text
+/data/Datasets
+```
+
+Patient MRI data is not redistributed with NeuroPrompt-3D.
 
 Dataset checkpoint:
 
-- archive: `BraTS2024-BraTS-GLI-TrainingData.zip`
-- Synapse entity: `syn60086071`
-- verified release: version 2
-- verified MD5: `1d910b17d6cd32e38aa6296b8dfb7c77`
-- first inspected case: `BraTS-GLI-03011-101`
+- archive: `BraTS2024-BraTS-GLI-TrainingData.zip`;
+- Synapse entity: `syn60086071`;
+- verified release: version 2;
+- verified MD5:
 
-BraTS modality names are mapped into the shared NeuroPrompt-3D contract as:
+```text
+1d910b17d6cd32e38aa6296b8dfb7c77
+```
 
-- `t1n` -> `T1`
-- `t1c` -> `T1ce`
-- `t2w` -> `T2`
-- `t2f` -> `FLAIR`
+First inspected real case:
 
-For the inspected case, all four MRI modalities and the segmentation share:
+```text
+BraTS-GLI-03011-101
+```
 
-- NIfTI shape: `(182, 218, 182)`
-- voxel spacing: `(1.0, 1.0, 1.0)` mm
-- orientation codes: `L`, `A`, `S`
-- matching MRI/segmentation affine geometry
+BraTS modality filenames map into the NeuroPrompt-3D contract as:
 
-The existing `load_multimodal_case` function successfully loads the real
-case as a contiguous `torch.float32` tensor with shape
-`[4, 182, 218, 182]`.
+```text
+t1n → T1
+t1c → T1ce
+t2w → T2
+t2f → FLAIR
+seg → segmentation
+```
 
-The original segmentation is preserved. The inspected case contains label
-values `0`, `1`, `2`, and `3`. A binary whole-tumor target can later be
-derived as all nonzero segmentation voxels while retaining the original
-multiclass labels separately.
+For the inspected case, all four MRI modalities and the segmentation have:
 
-Raw intensity statistics were also inspected independently for T1, T1ce,
-T2, and FLAIR. No normalization has been applied yet. Foreground
-per-modality normalization is the next preprocessing milestone.
+```text
+NIfTI shape:   (182, 218, 182)
+voxel spacing: (1.0, 1.0, 1.0) mm
+orientation:   L, A, S
+```
+
+MRI and segmentation affine geometry also match.
+
+The existing multimodal loader successfully produces:
+
+```text
+torch.Size([4, 182, 218, 182])
+```
+
+with:
+
+```text
+dtype:      torch.float32
+contiguous: True
+```
+
+The inspected segmentation contains the label values:
+
+```text
+0, 1, 2, 3
+```
+
+The original multiclass segmentation is preserved.
+
+For the first binary segmentation model, a whole-tumor target can later be derived conceptually as:
+
+```python
+whole_tumor = segmentation > 0
+```
+
+without destroying the original multiclass labels.
+
+Tumor-rich slices were also identified automatically for visualization:
+
+```text
+Axial Z:    107
+Coronal Y:  117
+Sagittal X: 50
+```
+
+Real T1ce tumor-overlay and four-modality comparison figures were generated outside the repository for visual validation.
+
+---
 
 ## Milestone 4: foreground MRI normalization
 
-NeuroPrompt-3D now supports foreground z-score normalization for real
-multimodal MRI tensors.
+NeuroPrompt-3D now supports foreground z-score normalization for real multimodal MRI tensors.
 
-Each MRI modality is normalized independently. For every 3D volume:
+MRI intensities from different sequences can have very different numerical scales.
+
+For the first inspected BraTS case, the raw foreground statistics differed substantially between modalities.
+
+Approximate values included:
+
+```text
+T1
+mean ≈ 1847.72
+std  ≈ 546.24
+
+T1ce
+mean ≈ 2456.94
+std  ≈ 813.53
+
+T2
+mean ≈ 1457.99
+std  ≈ 589.41
+
+FLAIR
+mean ≈ 800.54
+std  ≈ 265.74
+```
+
+These different raw scales should not cause the neural network to interpret one modality as inherently more important simply because its numerical values are larger.
+
+### Foreground z-score normalization
+
+Each modality is normalized independently.
+
+For every 3D MRI volume:
 
 1. zero-valued background voxels are excluded from the statistics;
-2. the mean and population standard deviation are calculated from the
-   nonzero foreground;
-3. foreground intensities are converted to z-scores;
-4. outside-brain background remains exactly zero.
+2. the foreground mean is calculated;
+3. the foreground population standard deviation is calculated;
+4. foreground intensities are converted into z-scores;
+5. outside-brain background remains exactly zero.
 
-For a multimodal MRI tensor in `[4, D, H, W]` order, T1, T1ce, T2, and
-FLAIR are normalized separately rather than sharing one global mean and
-standard deviation.
+The normalization equation is:
 
-The preprocessing utilities validate:
+```text
+z = (x - mean) / standard deviation
+```
 
-- single-modality inputs are 3D floating-point tensors;
-- multimodal inputs follow the shared `[4, D, H, W]` modality contract;
+For a multimodal tensor:
+
+```text
+[4, D, H, W]
+```
+
+the channels are normalized separately:
+
+```text
+T1     → own mean and standard deviation
+T1ce   → own mean and standard deviation
+T2     → own mean and standard deviation
+FLAIR  → own mean and standard deviation
+```
+
+One global mean and standard deviation are **not** shared across all modalities.
+
+The preprocessing functions validate:
+
+- single-modality inputs are 3D;
+- single-modality inputs use a floating-point dtype;
+- multimodal inputs follow `[4, D, H, W]`;
 - all-zero volumes are handled safely;
-- zero-variance foreground is handled without producing NaN values;
+- zero-variance foreground is handled safely;
+- NaN values are avoided for these edge cases;
 - input tensors are not modified in-place.
 
-The normalization pipeline was also verified on the real
-`BraTS-GLI-03011-101` case. For all four modalities, the normalized
-foreground had mean approximately `0` and population standard deviation
-approximately `1`, while background voxels remained `0`.
+The normalization pipeline was tested on:
+
+```text
+BraTS-GLI-03011-101
+```
+
+For all four modalities after normalization:
+
+```text
+foreground mean ≈ 0
+foreground std  ≈ 1
+background      = 0
+```
+
+The output retained:
+
+```text
+shape:      [4, 182, 218, 182]
+dtype:      torch.float32
+contiguous: True
+```
+
+and all output values were finite.
 
 Run the preprocessing tests with:
 
 ```bash
 python -m pytest -q tests/test_preprocessing.py
+```
 
-## Run it
+---
 
-From the project root, activate the existing environment and run the tests:
+## Data safety
+
+Real BraTS MRI data is never stored inside this Git repository.
+
+The project `.gitignore` blocks common medical-image and model artifact formats, including:
+
+```text
+*.nii
+*.nii.gz
+*.mha
+*.mhd
+*.nrrd
+*.pt
+*.pth
+*.ckpt
+BraTS*.zip
+```
+
+Real datasets remain under:
+
+```text
+/data/Datasets
+```
+
+while project source code remains under:
+
+```text
+/data/Projects/Project_03
+```
+
+The project does not redistribute BraTS patient MRI files.
+
+---
+
+## Run the project
+
+From the repository root, activate the NeuroPrompt-3D Conda environment:
 
 ```bash
-conda activate neuroprompt3d
+conda activate /data/Conda/envs/neuroprompt3d
+```
+
+Run the complete automated test suite:
+
+```bash
 python -m pytest -q
 ```
 
-Generate the demonstration case:
+Current checkpoint:
+
+```text
+46 passed
+```
+
+Generate the synthetic demonstration case:
 
 ```bash
 python -m scripts.generate_synthetic_case
 ```
 
-This creates:
+The generated synthetic files are stored in ignored development directories such as:
 
 ```text
-data/synthetic/synthetic_001_mri.nii.gz
-data/synthetic/synthetic_001_mask.nii.gz
-outputs/synthetic_001_preview.png
+data/synthetic/
+outputs/
 ```
+
+---
+
+## Planned next stages
+
+The current development roadmap includes:
+
+1. real BraTS case discovery;
+2. subject-level train / validation / test splitting;
+3. protection against longitudinal patient leakage;
+4. dataset preprocessing pipeline;
+5. lightweight 3D U-Net;
+6. binary whole-tumor prediction;
+7. MC Dropout stochastic inference;
+8. voxel-wise uncertainty estimation;
+9. uncertainty-guided automatic point prompts;
+10. optional uncertainty-guided box prompts;
+11. frozen SAM-Med3D refinement;
+12. Dice, IoU, and HD95 evaluation;
+13. coarse-versus-refined segmentation comparison;
+14. external/generalization evaluation;
+15. research-focused user interface.
+
+---
+
+## Planned interface
+
+The final application is intended to behave more like a medical-imaging research workstation than a generic machine-learning dashboard.
+
+Planned functionality includes:
+
+- demo cases;
+- user-supplied T1 / T1ce / T2 / FLAIR NIfTI files;
+- optional ground-truth segmentation;
+- axial, coronal, and sagittal viewing;
+- modality switching;
+- coarse segmentation display;
+- uncertainty-map display;
+- automatic prompt visualization;
+- refined segmentation display;
+- Dice, IoU, and HD95 comparison when ground truth is available.
+
+MRI prediction and uncertainty visualization may still be performed without ground-truth segmentation, but evaluation metrics requiring ground truth cannot be calculated.
+
+---
+
+## Research disclaimer
+
+NeuroPrompt-3D is an educational and research prototype.
+
+It is not validated for clinical decision-making, diagnosis, treatment planning, or patient care.
