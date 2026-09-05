@@ -61,12 +61,15 @@ Completed so far:
 - MRI and segmentation geometry checks;
 - real tumor visualization;
 - per-modality foreground z-score normalization;
-- automated preprocessing tests.
+- automated preprocessing tests;
+- BraTS archive case discovery and required-file validation;
+- deterministic subject-level splitting that keeps longitudinal cases together;
+- a reproducible BraTS cohort split manifest.
 
 Current automated test suite:
 
 ```text
-46 passed
+84 passed
 ```
 
 ---
@@ -497,6 +500,41 @@ python -m pytest -q tests/test_preprocessing.py
 
 ---
 
+## Milestone 5: leakage-safe BraTS cohort splitting
+
+`src/data/brats.py` supports case discovery and required-file validation for the BraTS 2024 Adult Glioma Post-Treatment archive, grouping longitudinal cases by subject, and reproducible train / validation / test splitting.
+
+A case ID such as `BraTS-GLI-03011-101` identifies subject `BraTS-GLI-03011` and timepoint `101`. All timepoints belonging to one subject stay in the same split. This prevents the same subject's scans from appearing in both training and evaluation sets.
+
+Subjects are sorted before shuffling with a local random generator using seed `42`, so the assignments do not depend on the input order. The target subject fractions are 80% training, 10% validation, and 10% test. Training and validation counts are rounded down, and the remaining subjects enter the test split. Case proportions can differ because subjects have different numbers of timepoints.
+
+The saved manifest is:
+
+```text
+splits/brats2024_posttreatment_seed42.json
+```
+
+It records dataset provenance (Synapse ID, release version, and archive MD5), split settings, subject and case IDs, and counts.
+
+| Split | Subjects | Cases |
+| --- | ---: | ---: |
+| Train | 490 | 1078 |
+| Validation | 61 | 143 |
+| Test | 62 | 129 |
+| Total | 613 | 1350 |
+
+The saved manifest was independently checked for zero subject overlap and zero case overlap between all split pairs, with full coverage of the 613 subjects and 1350 cases. Only IDs and metadata are stored in the manifest; MRI files remain outside the repository.
+
+Run the focused BraTS tests with:
+
+```bash
+python -m pytest -q tests/test_brats.py
+```
+
+Milestone 5 adds 38 tests to the previous 46, bringing the full suite to **84 tests**.
+
+---
+
 ## Data safety
 
 Real BraTS MRI data is never stored inside this Git repository.
@@ -548,7 +586,7 @@ python -m pytest -q
 Current checkpoint:
 
 ```text
-46 passed
+84 passed
 ```
 
 Generate the synthetic demonstration case:
@@ -570,21 +608,18 @@ outputs/
 
 The current development roadmap includes:
 
-1. real BraTS case discovery;
-2. subject-level train / validation / test splitting;
-3. protection against longitudinal patient leakage;
-4. dataset preprocessing pipeline;
-5. lightweight 3D U-Net;
-6. binary whole-tumor prediction;
-7. MC Dropout stochastic inference;
-8. voxel-wise uncertainty estimation;
-9. uncertainty-guided automatic point prompts;
-10. optional uncertainty-guided box prompts;
-11. frozen SAM-Med3D refinement;
-12. Dice, IoU, and HD95 evaluation;
-13. coarse-versus-refined segmentation comparison;
-14. external/generalization evaluation;
-15. research-focused user interface.
+1. dataset preprocessing pipeline;
+2. lightweight 3D U-Net;
+3. binary whole-tumor prediction;
+4. MC Dropout stochastic inference;
+5. voxel-wise uncertainty estimation;
+6. uncertainty-guided automatic point prompts;
+7. optional uncertainty-guided box prompts;
+8. frozen SAM-Med3D refinement;
+9. Dice, IoU, and HD95 evaluation;
+10. coarse-versus-refined segmentation comparison;
+11. external/generalization evaluation;
+12. research-focused user interface.
 
 ---
 
