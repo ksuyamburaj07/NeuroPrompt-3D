@@ -62,11 +62,6 @@ four `(6, 5, 4)` files produce a `(4, 4, 5, 6)` tensor. These labels describe
 array axes; loading does not reorient or resample the images. Intensities
 are read as float32 without normalization, and no mask file is required.
 
-Run the focused synthetic-file tests with:
-
-```bash
-python -m pytest -q tests/test_multimodal_nifti.py
-```
 
 ## Milestone 3 Step 3: real BraTS case validation
 
@@ -110,6 +105,41 @@ multiclass labels separately.
 Raw intensity statistics were also inspected independently for T1, T1ce,
 T2, and FLAIR. No normalization has been applied yet. Foreground
 per-modality normalization is the next preprocessing milestone.
+
+## Milestone 4: foreground MRI normalization
+
+NeuroPrompt-3D now supports foreground z-score normalization for real
+multimodal MRI tensors.
+
+Each MRI modality is normalized independently. For every 3D volume:
+
+1. zero-valued background voxels are excluded from the statistics;
+2. the mean and population standard deviation are calculated from the
+   nonzero foreground;
+3. foreground intensities are converted to z-scores;
+4. outside-brain background remains exactly zero.
+
+For a multimodal MRI tensor in `[4, D, H, W]` order, T1, T1ce, T2, and
+FLAIR are normalized separately rather than sharing one global mean and
+standard deviation.
+
+The preprocessing utilities validate:
+
+- single-modality inputs are 3D floating-point tensors;
+- multimodal inputs follow the shared `[4, D, H, W]` modality contract;
+- all-zero volumes are handled safely;
+- zero-variance foreground is handled without producing NaN values;
+- input tensors are not modified in-place.
+
+The normalization pipeline was also verified on the real
+`BraTS-GLI-03011-101` case. For all four modalities, the normalized
+foreground had mean approximately `0` and population standard deviation
+approximately `1`, while background voxels remained `0`.
+
+Run the preprocessing tests with:
+
+```bash
+python -m pytest -q tests/test_preprocessing.py
 
 ## Run it
 
