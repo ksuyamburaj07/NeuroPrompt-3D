@@ -1,3 +1,4 @@
+import json
 import pytest
 from src.data.brats import (
     expected_case_filenames,
@@ -9,6 +10,7 @@ from src.data.brats import (
     group_cases_by_subject,
     split_subject_ids,
     build_split_manifest,
+    load_split_case_ids,
 )
 
 
@@ -490,4 +492,70 @@ def test_build_split_manifest_rejects_missing_subject():
         build_split_manifest(
             subjects,
             splits,
+        )
+
+def test_load_split_case_ids_preserves_saved_order(tmp_path):
+    manifest_path = tmp_path / "splits.json"
+
+    manifest = {
+        "splits": {
+            "train": {
+                "case_ids": [
+                    "BraTS-GLI-00008-101",
+                    "BraTS-GLI-00005-100",
+                ],
+            },
+            "validation": {
+                "case_ids": [],
+            },
+            "test": {
+                "case_ids": [],
+            },
+        },
+    }
+
+    manifest_path.write_text(
+        json.dumps(manifest),
+        encoding="utf-8",
+    )
+
+    case_ids = load_split_case_ids(
+        manifest_path,
+        "train",
+    )
+
+    assert case_ids == (
+        "BraTS-GLI-00008-101",
+        "BraTS-GLI-00005-100",
+    )
+
+def test_load_split_case_ids_rejects_invalid_split_name(tmp_path):
+    manifest_path = tmp_path / "splits.json"
+
+    manifest = {
+        "splits": {
+            "train": {
+                "case_ids": [],
+            },
+            "validation": {
+                "case_ids": [],
+            },
+            "test": {
+                "case_ids": [],
+            },
+        },
+    }
+
+    manifest_path.write_text(
+        json.dumps(manifest),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Split name must be one of",
+    ):
+        load_split_case_ids(
+            manifest_path,
+            "holdout",
         )

@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from src.data.modalities import MODALITY_NAMES
-from src.data.nifti import load_multimodal_case
+from src.data.nifti import load_multimodal_case, load_segmentation
 
 
 @pytest.fixture
@@ -100,3 +100,125 @@ def test_load_separate_modalities_accepts_affine_rounding_noise(modality_paths):
     mri = load_multimodal_case(modality_paths)
 
     assert mri.shape == (4, 4, 5, 6)
+
+def test_load_segmentation_preserves_labels_and_spatial_axes(tmp_path):
+    values = np.zeros((6, 5, 4), dtype=np.uint8)
+
+    values[3, 2, 1] = 1
+    values[5, 4, 3] = 3
+
+    affine = np.eye(4)
+    path = tmp_path / "case_001_seg.nii.gz"
+
+    nib.save(
+        nib.Nifti1Image(values, affine),
+        path,
+    )
+
+    segmentation = load_segmentation(path)
+
+    assert segmentation.shape == (4, 5, 6)
+    assert segmentation.dtype == torch.uint8
+    assert segmentation.is_contiguous()
+
+    assert segmentation[1, 2, 3].item() == 1
+    assert segmentation[3, 4, 5].item() == 3
+
+@pytest.mark.parametrize(
+    "shape",
+    [
+        (6, 5),
+        (6, 5, 4, 1),
+    ],
+    ids=[
+        "2d",
+        "4d_singleton",
+    ],
+)
+def test_load_segmentation_rejects_non_3d(tmp_path, shape):
+    values = np.zeros(
+        shape,
+        dtype=np.uint8,
+    )
+
+    path = tmp_path / "case_001_seg.nii.gz"
+
+    nib.save(
+        nib.Nifti1Image(
+            values,
+            np.eye(4),
+        ),
+        path,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Segmentation NIfTI must be 3D",
+    ):
+        load_segmentation(path)
+
+def test_load_segmentation_rejects_reference_affine_mismatch(tmp_path):
+    reference_path = tmp_path / "t1.nii.gz"
+    segmentation_path = tmp_path / "seg.nii.gz"
+
+    reference_affine = np.eye(4)
+
+    segmentation_affine = np.eye(4)
+    segmentation_affine[0, 3] = 5.0
+
+    nib.save(
+        nib.Nifti1Image(
+            np.zeros((6, 5, 4), dtype=np.float32),
+            reference_affine,
+        ),
+        reference_path,
+    )
+
+    nib.save(
+        nib.Nifti1Image(
+            np.zeros((6, 5, 4), dtype=np.uint8),
+            segmentation_affine,
+        ),
+        segmentation_path,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Segmentation NIfTI affine must match T1",
+    ):
+        load_segmentation(
+            segmentation_path,
+            reference_path=reference_path,
+        )
+
+def test_load_segmentation_accepts_reference_affine_rounding_noise(tmp_path):
+    reference_path = tmp_path / "t1.nii.gz"
+    segmentation_path = tmp_path / "seg.nii.gz"
+
+    reference_affine = np.eye(4)
+
+    segmentation_affine = np.eye(4)
+    segmentation_affine[0, 0] += 5e-6
+
+    nib.save(
+        nib.Nifti1Image(
+            np.zeros((6, 5, 4), dtype=np.float32),
+            reference_affine,
+        ),
+        reference_path,
+    )
+
+    nib.save(
+        nib.Nifti1Image(
+            np.zeros((6, 5, 4), dtype=np.uint8),
+            segmentation_affine,
+        ),
+        segmentation_path,
+    )
+
+    segmentation = load_segmentation(
+        segmentation_path,
+        reference_path=reference_path,
+    )
+
+    assert segmentation.shape == (4, 5, 6)

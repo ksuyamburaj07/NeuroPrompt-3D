@@ -102,3 +102,40 @@ def load_multimodal_case(
     arrays = [np.asarray(image.dataobj, dtype=np.float32) for image in images]
     mri_array = np.stack(arrays, axis=0)
     return torch.from_numpy(mri_array).permute(0, 3, 2, 1).contiguous()
+
+def load_segmentation(
+    path: str | Path,
+    reference_path: str | Path | None = None,
+) -> torch.Tensor:
+    """Load one 3D segmentation NIfTI as contiguous uint8 [D, H, W]."""
+    image = nib.load(path)
+
+    if len(image.shape) != 3:
+        raise ValueError(
+            f"Segmentation NIfTI must be 3D [X, Y, Z]; got shape {image.shape}"
+        )
+
+    if reference_path is not None:
+        reference = nib.load(reference_path)
+
+        if not np.allclose(
+            image.affine,
+            reference.affine,
+            rtol=0,
+            atol=1e-5,
+        ):
+            raise ValueError(
+                "Segmentation NIfTI affine must match T1 "
+                "(atol=1e-5, rtol=0)"
+            )
+
+    array = np.asarray(
+        image.dataobj,
+        dtype=np.uint8,
+    )
+
+    return (
+        torch.from_numpy(array)
+        .permute(2, 1, 0)
+        .contiguous()
+    )

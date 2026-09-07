@@ -4,6 +4,7 @@ from pathlib import Path
 from zipfile import ZipFile
 from collections import defaultdict
 import random
+import json
 
 from src.data.modalities import MODALITY_NAMES
 import re
@@ -277,3 +278,32 @@ def build_split_manifest(
         }
 
     return manifest
+
+def load_split_case_ids(
+    manifest_path: str | Path,
+    split_name: str,
+) -> tuple[str, ...]:
+    """Load saved case IDs for one split from a frozen manifest."""
+    valid_split_names = {
+        "train",
+        "validation",
+        "test",
+    }
+
+    if split_name not in valid_split_names:
+        raise ValueError(
+            "Split name must be one of: "
+            "train, validation, test"
+        )
+
+    manifest_path = Path(manifest_path)
+
+    manifest = json.loads(
+        manifest_path.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    case_ids = manifest["splits"][split_name]["case_ids"]
+
+    return tuple(case_ids)

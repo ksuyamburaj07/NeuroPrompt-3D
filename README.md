@@ -65,11 +65,19 @@ Completed so far:
 - BraTS archive case discovery and required-file validation;
 - deterministic subject-level splitting that keeps longitudinal cases together;
 - a reproducible BraTS cohort split manifest.
-
+- raw BraTS segmentation NIfTI loading with preserved multiclass labels;
+- binary whole-tumor target derivation for the first segmentation model;
+- MRI-to-segmentation affine validation;
+- model-ready MRI and target preparation;
+- frozen split-manifest case loading without downstream reshuffling;
+- a PyTorch `BraTSDataset` backed by the frozen cohort assignments;
+- synchronized 3D MRI and target cropping;
+- tumor-centered and brain-background-centered patch sampling;
+- reproducible seeded random training-patch selection.
 Current automated test suite:
 
 ```text
-84 passed
+116 passed
 ```
 
 ---
@@ -535,6 +543,121 @@ Milestone 5 adds 38 tests to the previous 46, bringing the full suite to **84 te
 
 ---
 
+## Milestone 6: model-ready BraTS preprocessing and 3D patch sampling
+
+Milestone 6 extends the BraTS data pipeline from frozen cohort assignments to model-ready PyTorch training samples.
+
+Raw BraTS segmentation NIfTI files are loaded as contiguous `torch.uint8` tensors in the project's internal `[D, H, W]` spatial convention. The original multiclass labels are preserved, while a separate binary whole-tumor target is derived using:
+
+```text
+0       -> background
+1 / 2 / 3 -> whole tumor
+```
+
+The MRI remains in the fixed multimodal layout:
+
+```text
+[4, D, H, W]
+```
+
+and each MRI modality is independently normalized using nonzero-foreground z-score normalization.
+
+`prepare_model_case()` combines the normalized MRI with the derived whole-tumor target while enforcing matching spatial dimensions.
+
+Segmentation geometry is also validated against the T1 reference affine using:
+
+```text
+atol = 1e-5
+rtol = 0
+```
+
+so meaningful physical-space mismatches are rejected while tiny floating-point rounding differences remain acceptable.
+
+A real BraTS case was successfully processed end to end:
+
+```text
+BraTS-GLI-03011-101
+
+Raw MRI:          [4, 182, 218, 182]
+Raw segmentation: [182, 218, 182]
+
+Prepared MRI:     [4, 182, 218, 182]
+Binary target:    [182, 218, 182]
+```
+
+The raw segmentation labels were:
+
+```text
+[0, 1, 2, 3]
+```
+
+and the derived whole-tumor target contained:
+
+```text
+[0, 1]
+```
+
+with 135353 whole-tumor voxels.
+
+### Frozen-manifest dataset integration
+
+Downstream datasets do not recompute or reshuffle the train / validation / test assignments.
+
+`load_split_case_ids()` reads the case IDs directly from:
+
+```text
+splits/brats2024_posttreatment_seed42.json
+```
+
+and preserves their stored order.
+
+`BraTSDataset.from_manifest()` therefore creates datasets using exactly the frozen Milestone 5 assignments:
+
+| Split      | Cases |
+| ---------- | ----: |
+| Train      |  1078 |
+| Validation |   143 |
+| Test       |   129 |
+
+`dataset[index]` loads the requested case, validates geometry, normalizes the four MRI modalities, derives the binary target, and returns the model-ready pair.
+
+### 3D training-patch preparation
+
+Full BraTS MRI volumes are too memory-intensive for the initial lightweight 3D U-Net training workflow, so Milestone 6 establishes synchronized 3D patch extraction.
+
+MRI and target always use identical spatial crop coordinates.
+
+The implemented crop utilities support:
+
+- deterministic center cropping;
+- cropping around a selected spatial center;
+- boundary-safe crops that shift inward near volume edges;
+- tumor-centered patches;
+- non-tumor patches restricted to nonzero MRI foreground;
+- explicit rejection of impossible oversized crops.
+
+The training sampler can choose between positive and background patches using a configurable probability:
+
+```text
+positive_probability = 0.5
+```
+
+which represents the initial intended 1:1 positive/background sampling strategy.
+
+Positive patches choose a random tumor voxel.
+
+Background patches choose a random non-tumor voxel inside MRI foreground rather than empty zero-valued space outside the brain.
+
+A `torch.Generator` can be supplied so both the branch decision and voxel-center selection are reproducible from a fixed seed.
+
+Random patch sampling is intended for the training split only. Validation and test evaluation will later use deterministic full-volume or sliding-window inference rather than random evaluation patches.
+
+Milestone 6 adds 32 tests to the previous 84, bringing the complete automated suite to:
+
+```text
+116 passed
+```
+
 ## Data safety
 
 Real BraTS MRI data is never stored inside this Git repository.
@@ -586,7 +709,7 @@ python -m pytest -q
 Current checkpoint:
 
 ```text
-84 passed
+116 passed
 ```
 
 Generate the synthetic demonstration case:
@@ -608,9 +731,9 @@ outputs/
 
 The current development roadmap includes:
 
-1. dataset preprocessing pipeline;
-2. lightweight 3D U-Net;
-3. binary whole-tumor prediction;
+1. lightweight 3D U-Net baseline;
+2. binary whole-tumor training and validation;
+3. full-volume / sliding-window inference;
 4. MC Dropout stochastic inference;
 5. voxel-wise uncertainty estimation;
 6. uncertainty-guided automatic point prompts;
