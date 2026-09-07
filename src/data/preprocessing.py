@@ -200,7 +200,7 @@ def tumor_centered_crop(
 
     center = tuple(
         int(value)
-        for value in tumor_voxels[0]
+        for value in tumor_voxels[index]
     )
 
     return crop_pair_around_center(
@@ -237,7 +237,7 @@ def background_centered_crop(
 
     center = tuple(
         int(value)
-        for value in background_candidates[0]
+        for value in background_candidates[index]
     )
 
     return crop_pair_around_center(

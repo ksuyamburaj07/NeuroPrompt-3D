@@ -511,7 +511,7 @@ def test_background_centered_crop_rejects_no_valid_background():
         )
 
 def test_sample_training_patch_can_force_positive_or_background_branch():
-    mri = torch.ones(
+    mri = torch.zeros(
         (4, 12, 12, 12),
         dtype=torch.float32,
     )
@@ -521,7 +521,9 @@ def test_sample_training_patch_can_force_positive_or_background_branch():
         dtype=torch.uint8,
     )
 
-    # Put the tumor far from the first background region.
+    # Keep every eligible background center far from the tumor.
+    mri[:, 1:4, 1:4, 1:4] = 1.0
+    mri[:, 10, 10, 10] = 1.0
     target[10, 10, 10] = 1
 
     positive_mri, positive_target = sample_training_patch(
@@ -684,3 +686,33 @@ def test_sample_training_patch_rejects_invalid_positive_probability(
             spatial_size=(4, 4, 4),
             positive_probability=positive_probability,
         )
+
+
+@pytest.mark.parametrize("crop", [tumor_centered_crop, background_centered_crop])
+def test_centered_crop_uses_sampled_candidate_and_replays_sequence(crop):
+    # Two separated, identifiable candidates make always choosing [0] detectable.
+    mri = torch.zeros((4, 9, 9, 9))
+    target = torch.zeros((9, 9, 9), dtype=torch.uint8)
+    centers = [(2, 2, 2), (6, 6, 6)]
+    for value, center in enumerate(centers, start=1):
+        mri[:, center[0], center[1], center[2]] = value
+        if crop is tumor_centered_crop:
+            target[center] = 1
+
+    def draw_sequence():
+        generator = torch.Generator().manual_seed(0)
+        return [crop(mri, target, (3, 3, 3), generator=generator)
+                for _ in range(8)]
+
+    expected_generator = torch.Generator().manual_seed(0)
+    indices = [torch.randint(2, (1,), generator=expected_generator).item()
+               for _ in range(8)]
+    assert set(indices) == {0, 1}
+    first = draw_sequence()
+    replay = draw_sequence()
+    for index, (actual_mri, actual_target), repeated in zip(indices, first, replay):
+        d, h, w = centers[index]
+        assert torch.equal(actual_mri, mri[:, d-1:d+2, h-1:h+2, w-1:w+2])
+        assert torch.equal(actual_target, target[d-1:d+2, h-1:h+2, w-1:w+2])
+        assert torch.equal(actual_mri, repeated[0])
+        assert torch.equal(actual_target, repeated[1])

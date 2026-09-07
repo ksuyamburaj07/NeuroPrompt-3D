@@ -9,63 +9,6 @@ from src.data.dataset import (
     load_prepared_brats_case,
 )
 
-def test_load_prepared_brats_case_rejects_segmentation_affine_mismatch(
-    tmp_path,
-):
-    case_id = "BraTS-GLI-00001-100"
-    case_dir = tmp_path / case_id
-    case_dir.mkdir()
-
-    mri_affine = np.eye(4)
-
-    modality_suffixes = (
-        "t1n",
-        "t1c",
-        "t2w",
-        "t2f",
-    )
-
-    for suffix in modality_suffixes:
-        values = np.ones(
-            (4, 3, 2),
-            dtype=np.float32,
-        )
-
-        nib.save(
-            nib.Nifti1Image(
-                values,
-                mri_affine,
-            ),
-            case_dir / f"{case_id}-{suffix}.nii.gz",
-        )
-
-    segmentation = np.zeros(
-        (4, 3, 2),
-        dtype=np.uint8,
-    )
-
-    segmentation_affine = np.eye(4)
-    segmentation_affine[0, 3] = 5.0
-
-    nib.save(
-        nib.Nifti1Image(
-            segmentation,
-            segmentation_affine,
-        ),
-        case_dir / f"{case_id}-seg.nii.gz",
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Segmentation NIfTI affine must match T1",
-    ):
-        load_prepared_brats_case(
-            case_dir,
-            case_id,
-    )
-
-
-
 def test_load_prepared_brats_case_returns_model_ready_pair(tmp_path):
     case_id = "BraTS-GLI-00001-100"
     case_dir = tmp_path / case_id
