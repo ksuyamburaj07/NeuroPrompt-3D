@@ -77,7 +77,7 @@ Completed so far:
 Current automated test suite:
 
 ```text
-139 passed
+159 passed
 ```
 
 ---
@@ -709,7 +709,7 @@ python -m pytest -q
 Current checkpoint:
 
 ```text
-139 passed
+159 passed
 ```
 
 Generate the synthetic demonstration case:
