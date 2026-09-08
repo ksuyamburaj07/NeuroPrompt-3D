@@ -9,7 +9,6 @@ from src.training.runner import (
 
 def run_baseline_training(
     experiment,
-    num_epochs: int,
     output_dir: str | Path,
 ) -> list[EpochResult]:
     """Run baseline training and persist its main outputs."""
@@ -18,7 +17,7 @@ def run_baseline_training(
 
     history = run_baseline_epochs(
         experiment=experiment,
-        num_epochs=num_epochs,
+        num_epochs=experiment.config.num_epochs,
         checkpoint_path=(
             output_path / "best_baseline.pt"
         ),

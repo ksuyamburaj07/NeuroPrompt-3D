@@ -12,6 +12,7 @@ class BaselineTrainingConfig:
     )
 
     batch_size: int = 1
+    num_epochs: int = 1
     learning_rate: float = 1e-3
 
     base_channels: int = 8
@@ -88,3 +89,8 @@ class BaselineTrainingConfig:
              raise ValueError(
                 "device must be one of: auto, cpu, cuda"
              )
+
+        if self.num_epochs <= 0:
+             raise ValueError(
+                 "num_epochs must be greater than zero"
+        )

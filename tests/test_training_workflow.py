@@ -45,11 +45,14 @@ def test_run_baseline_training_saves_checkpoint_and_history(
         save_history_mock,
     )
 
-    experiment = SimpleNamespace()
+    experiment = SimpleNamespace(
+    config=SimpleNamespace(
+        num_epochs=2,
+    ),
+)
 
     returned_history = run_baseline_training(
         experiment=experiment,
-        num_epochs=2,
         output_dir=tmp_path,
     )
 
@@ -112,6 +115,7 @@ def test_run_baseline_training_creates_real_output_files(
     config = BaselineTrainingConfig(
         base_channels=2,
         device="cpu",
+        num_epochs=2,
     )
 
     model = LightweightUNet3D(
@@ -138,7 +142,6 @@ def test_run_baseline_training_creates_real_output_files(
 
     history = run_baseline_training(
         experiment=experiment,
-        num_epochs=2,
         output_dir=output_dir,
     )
 

@@ -21,8 +21,9 @@ def test_baseline_training_config_has_expected_initial_settings():
     assert config.validation_overlap == 0.25
 
     assert config.seed == 42
-
     assert config.device == "auto"
+
+    assert config.num_epochs == 1
 
 @pytest.mark.parametrize(
     ("field_name", "invalid_value"),
@@ -89,4 +90,39 @@ def test_baseline_training_config_rejects_unknown_device():
     with pytest.raises(ValueError):
         BaselineTrainingConfig(
             device="quantum_gpu",
+        )
+
+@pytest.mark.parametrize(
+    "num_epochs",
+    [
+        1,
+        5,
+        50,
+    ],
+)
+def test_baseline_training_config_accepts_positive_epoch_counts(
+    num_epochs,
+):
+    config = BaselineTrainingConfig(
+        num_epochs=num_epochs,
+    )
+
+    assert config.num_epochs == num_epochs
+
+@pytest.mark.parametrize(
+    "num_epochs",
+    [
+        0,
+        -1,
+    ],
+)
+def test_baseline_training_config_rejects_non_positive_epoch_counts(
+    num_epochs,
+):
+    with pytest.raises(
+        ValueError,
+        match="num_epochs",
+    ):
+        BaselineTrainingConfig(
+            num_epochs=num_epochs,
         )
