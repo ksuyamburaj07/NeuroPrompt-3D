@@ -6,6 +6,8 @@ from src.models.unet3d import LightweightUNet3D
 from src.training.engine import (
     evaluate_one_batch,
     evaluate_one_epoch,
+    evaluate_sliding_window_batch,
+    evaluate_sliding_window_epoch,
     train_one_batch,
     train_one_epoch,
 )
@@ -313,3 +315,112 @@ def test_evaluate_one_epoch_returns_mean_loss_without_updating_parameters():
         )
         for name in before
     )
+
+def test_evaluate_sliding_window_batch_returns_loss_without_updating_model():
+    torch.manual_seed(42)
+
+    model = LightweightUNet3D(
+        in_channels=4,
+        out_channels=1,
+        base_channels=2,
+        dropout_probability=0.2,
+    )
+
+    mri = torch.randn(
+        1,
+        4,
+        20,
+        24,
+        28,
+    )
+
+    target = torch.zeros(
+        (1, 20, 24, 28),
+        dtype=torch.uint8,
+    )
+
+    target[
+        :,
+        6:14,
+        8:16,
+        10:18,
+    ] = 1
+
+    before = {
+        name: parameter.detach().clone()
+        for name, parameter in model.named_parameters()
+    }
+
+    loss = evaluate_sliding_window_batch(
+        model=model,
+        mri=mri,
+        target=target,
+        roi_size=(16, 16, 16),
+        overlap=0.25,
+    )
+
+    after = dict(model.named_parameters())
+
+    assert torch.isfinite(loss)
+    assert model.training is False
+
+    assert all(
+        torch.equal(
+            before[name],
+            after[name].detach(),
+        )
+        for name in before
+    )
+
+def test_evaluate_sliding_window_epoch_processes_full_volume_dataloader():
+    torch.manual_seed(42)
+
+    model = LightweightUNet3D(
+        in_channels=4,
+        out_channels=1,
+        base_channels=2,
+        dropout_probability=0.2,
+    )
+
+    mri = torch.randn(
+        2,
+        4,
+        20,
+        24,
+        28,
+    )
+
+    target = torch.zeros(
+        (2, 20, 24, 28),
+        dtype=torch.uint8,
+    )
+
+    target[
+        :,
+        6:14,
+        8:16,
+        10:18,
+    ] = 1
+
+    dataset = TensorDataset(
+        mri,
+        target,
+    )
+
+    loader = DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=False,
+    )
+
+    epoch_loss = evaluate_sliding_window_epoch(
+        model=model,
+        dataloader=loader,
+        roi_size=(16, 16, 16),
+        overlap=0.25,
+    )
+
+    assert isinstance(epoch_loss, float)
+    assert math.isfinite(epoch_loss)
+    assert epoch_loss >= 0.0
+    assert model.training is False
