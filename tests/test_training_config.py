@@ -22,6 +22,8 @@ def test_baseline_training_config_has_expected_initial_settings():
 
     assert config.seed == 42
 
+    assert config.device == "auto"
+
 @pytest.mark.parametrize(
     ("field_name", "invalid_value"),
     [
@@ -64,4 +66,27 @@ def test_baseline_training_config_rejects_invalid_patch_size(
     with pytest.raises(ValueError):
         BaselineTrainingConfig(
             patch_size=patch_size,
+        )
+
+@pytest.mark.parametrize(
+    "device",
+    [
+        "auto",
+        "cpu",
+        "cuda",
+    ],
+)
+def test_baseline_training_config_accepts_supported_devices(
+    device,
+):
+    config = BaselineTrainingConfig(
+        device=device,
+    )
+
+    assert config.device == device
+
+def test_baseline_training_config_rejects_unknown_device():
+    with pytest.raises(ValueError):
+        BaselineTrainingConfig(
+            device="quantum_gpu",
         )

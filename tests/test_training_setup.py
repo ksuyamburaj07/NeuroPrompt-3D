@@ -240,3 +240,58 @@ def test_build_baseline_experiment_replays_model_initialization_with_same_seed(
         )
         for name in state_a
     )
+
+def test_build_baseline_experiment_resolves_and_uses_config_device(
+    tmp_path,
+    monkeypatch,
+):
+    fake_train_loader = object()
+    fake_validation_loader = object()
+
+    def fake_build_dataloaders(
+        cases_root,
+        manifest_path,
+        config,
+    ):
+        return (
+            fake_train_loader,
+            fake_validation_loader,
+        )
+
+    captured = {}
+
+    def fake_resolve_device(
+        requested_device,
+    ):
+        captured["requested_device"] = requested_device
+        return torch.device("cpu")
+
+    monkeypatch.setattr(
+        "src.training.setup.build_baseline_dataloaders",
+        fake_build_dataloaders,
+    )
+
+    monkeypatch.setattr(
+        "src.training.setup.resolve_device",
+        fake_resolve_device,
+    )
+
+    config = BaselineTrainingConfig(
+        device="cpu",
+        base_channels=4,
+    )
+
+    experiment = build_baseline_experiment(
+        cases_root=tmp_path / "cases",
+        manifest_path=tmp_path / "frozen_split.json",
+        config=config,
+    )
+
+    assert captured["requested_device"] == "cpu"
+
+    assert experiment.device == torch.device("cpu")
+
+    assert (
+        next(experiment.model.parameters()).device
+        == experiment.device
+    )

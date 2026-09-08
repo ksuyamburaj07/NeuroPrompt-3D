@@ -11,7 +11,8 @@ from src.training.engine import (
     train_one_batch,
     train_one_epoch,
 )
-
+from unittest.mock import Mock
+from src.training.device import move_batch_to_device
 
 def test_train_one_batch_updates_model_parameters():
     model = LightweightUNet3D(
@@ -424,3 +425,167 @@ def test_evaluate_sliding_window_epoch_processes_full_volume_dataloader():
     assert math.isfinite(epoch_loss)
     assert epoch_loss >= 0.0
     assert model.training is False
+
+def test_train_one_batch_moves_batch_to_model_device(
+    monkeypatch,
+):
+    model = LightweightUNet3D(
+        in_channels=4,
+        out_channels=1,
+        base_channels=2,
+        dropout_probability=0.0,
+    )
+
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=1e-3,
+    )
+
+    mri = torch.randn(
+        1,
+        4,
+        16,
+        16,
+        16,
+    )
+
+    target = torch.zeros(
+        (1, 16, 16, 16),
+        dtype=torch.uint8,
+    )
+
+    real_move = move_batch_mock = Mock(
+        side_effect=lambda mri, target, device: (
+            mri.to(device),
+            target.to(device),
+        )
+    )
+
+    monkeypatch.setattr(
+        "src.training.engine.move_batch_to_device",
+        real_move,
+    )
+
+    train_one_batch(
+        model=model,
+        optimizer=optimizer,
+        mri=mri,
+        target=target,
+    )
+
+    expected_device = next(
+        model.parameters()
+    ).device
+
+    move_batch_mock.assert_called_once()
+
+    assert (
+        move_batch_mock.call_args.kwargs["device"]
+        == expected_device
+    )
+
+def test_evaluate_one_batch_moves_batch_to_model_device(
+    monkeypatch,
+):
+    model = LightweightUNet3D(
+        in_channels=4,
+        out_channels=1,
+        base_channels=2,
+        dropout_probability=0.0,
+    )
+
+    mri = torch.randn(
+        1,
+        4,
+        16,
+        16,
+        16,
+    )
+
+    target = torch.zeros(
+        (1, 16, 16, 16),
+        dtype=torch.uint8,
+    )
+
+    move_batch_mock = Mock(
+        side_effect=lambda mri, target, device: (
+            mri.to(device),
+            target.to(device),
+        )
+    )
+
+    monkeypatch.setattr(
+        "src.training.engine.move_batch_to_device",
+        move_batch_mock,
+    )
+
+    evaluate_one_batch(
+        model=model,
+        mri=mri,
+        target=target,
+    )
+
+    expected_device = next(
+        model.parameters()
+    ).device
+
+    move_batch_mock.assert_called_once()
+
+    assert (
+        move_batch_mock.call_args.kwargs["device"]
+        == expected_device
+    )
+
+def test_evaluate_sliding_window_batch_moves_batch_to_model_device(
+    monkeypatch,
+):
+    model = LightweightUNet3D(
+        in_channels=4,
+        out_channels=1,
+        base_channels=2,
+        dropout_probability=0.0,
+    )
+
+    mri = torch.randn(
+        1,
+        4,
+        20,
+        24,
+        28,
+    )
+
+    target = torch.zeros(
+        (1, 20, 24, 28),
+        dtype=torch.uint8,
+    )
+
+    move_batch_mock = Mock(
+        side_effect=lambda mri, target, device: (
+            mri.to(device),
+            target.to(device),
+        )
+    )
+
+    monkeypatch.setattr(
+        "src.training.engine.move_batch_to_device",
+        move_batch_mock,
+    )
+
+    evaluate_sliding_window_batch(
+        model=model,
+        mri=mri,
+        target=target,
+        roi_size=(16, 16, 16),
+        overlap=0.25,
+    )
+
+    expected_device = next(
+        model.parameters()
+    ).device
+
+    move_batch_mock.assert_called_once()
+
+    assert (
+        move_batch_mock.call_args.kwargs["device"]
+        == expected_device
+    )

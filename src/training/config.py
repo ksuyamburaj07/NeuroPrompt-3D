@@ -21,6 +21,7 @@ class BaselineTrainingConfig:
     validation_overlap: float = 0.25
 
     seed: int = 42
+    device: str = "auto"
 
     def __post_init__(self) -> None:
         if len(self.patch_size) != 3:
@@ -78,3 +79,12 @@ class BaselineTrainingConfig:
             raise ValueError(
                 "seed must be non-negative"
             )
+
+        if self.device not in {
+            "auto",
+             "cpu",
+            "cuda",
+        }:
+             raise ValueError(
+                "device must be one of: auto, cpu, cuda"
+             )

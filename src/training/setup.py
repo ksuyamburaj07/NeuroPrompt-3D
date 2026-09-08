@@ -6,6 +6,7 @@ from src.training.config import BaselineTrainingConfig
 from pathlib import Path
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
+from src.training.device import resolve_device
 
 from src.data.loaders import (
     build_brats_training_dataloader,
@@ -21,6 +22,7 @@ class BaselineExperiment:
     train_loader: DataLoader
     validation_loader: DataLoader
     config: BaselineTrainingConfig
+    device: torch.device
 
 def build_baseline_model(
     config: BaselineTrainingConfig,
@@ -78,8 +80,16 @@ def build_baseline_experiment(
 
     torch.manual_seed(config.seed)
 
+    device = resolve_device(
+        config.device,
+    )
+
     model = build_baseline_model(
         config=config,
+    )
+
+    model = model.to(
+        device=device,
     )
 
     optimizer = build_baseline_optimizer(
@@ -99,4 +109,5 @@ def build_baseline_experiment(
         train_loader=train_loader,
         validation_loader=validation_loader,
         config=config,
+        device=device,
     )

@@ -3,6 +3,7 @@ from torch import nn
 
 from src.training.losses import binary_segmentation_loss
 from src.inference.sliding_window import sliding_window_logits
+from src.training.device import move_batch_to_device
 
 def train_one_batch(
     model: nn.Module,
@@ -13,6 +14,16 @@ def train_one_batch(
     """Run one optimization step for a single training batch."""
 
     model.train()
+
+    device = next(
+        model.parameters()
+    ).device
+
+    mri, target = move_batch_to_device(
+        mri=mri,
+        target=target,
+        device=device,
+    )
 
     optimizer.zero_grad()
 
@@ -38,6 +49,16 @@ def evaluate_one_batch(
 
     model.eval()
 
+    device = next(
+        model.parameters()
+    ).device
+
+    mri, target = move_batch_to_device(
+        mri=mri,
+        target=target,
+        device=device,
+    )
+
     with torch.no_grad():
         logits = model(mri)
 
@@ -56,6 +77,17 @@ def evaluate_sliding_window_batch(
     overlap: float = 0.25,
 ) -> torch.Tensor:
     """Evaluate one full-volume batch using sliding-window inference."""
+
+    device = next(
+        model.parameters()
+    ).device
+
+    mri, target = move_batch_to_device(
+        mri=mri,
+        target=target,
+        device=device,
+    )
+
 
     logits = sliding_window_logits(
         model=model,
