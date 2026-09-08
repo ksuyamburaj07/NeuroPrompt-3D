@@ -1,6 +1,7 @@
 """Dataset utilities for model-ready BraTS cases."""
 
 from pathlib import Path
+import torch
 
 from src.data.brats import (
     load_split_case_ids,
@@ -11,7 +12,10 @@ from src.data.nifti import (
     load_multimodal_case,
     load_segmentation,
 )
-from src.data.preprocessing import prepare_model_case
+from src.data.preprocessing import (
+    prepare_model_case,
+    sample_training_patch,
+)
 from torch.utils.data import Dataset
 
 def load_prepared_brats_case(
@@ -90,4 +94,40 @@ class BraTSDataset(Dataset):
         return cls(
             cases_root=cases_root,
             case_ids=case_ids,
+        )
+
+class TrainingPatchDataset(Dataset):
+    """Wrap a full-case dataset and return sampled training patches."""
+
+    def __init__(
+        self,
+        base_dataset: Dataset,
+        spatial_size: tuple[int, int, int],
+        positive_probability: float = 0.5,
+        seed: int | None = None,
+    ) -> None:
+        self.base_dataset = base_dataset
+        self.spatial_size = spatial_size
+        self.positive_probability = positive_probability
+
+        self.generator = torch.Generator()
+
+        if seed is not None:
+            self.generator.manual_seed(seed)
+
+    def __len__(self) -> int:
+        return len(self.base_dataset)
+
+    def __getitem__(
+        self,
+        index: int,
+    ):
+        mri, target = self.base_dataset[index]
+
+        return sample_training_patch(
+            mri,
+            target,
+            spatial_size=self.spatial_size,
+            positive_probability=self.positive_probability,
+            generator=self.generator,
         )

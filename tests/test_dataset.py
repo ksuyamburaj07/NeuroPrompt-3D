@@ -8,6 +8,8 @@ from src.data.dataset import (
     BraTSDataset,
     load_prepared_brats_case,
 )
+from src.data.dataset import TrainingPatchDataset
+from torch.utils.data import TensorDataset
 
 def test_load_prepared_brats_case_returns_model_ready_pair(tmp_path):
     case_id = "BraTS-GLI-00001-100"
@@ -233,4 +235,112 @@ def test_brats_dataset_from_manifest_uses_frozen_case_ids(tmp_path):
     assert dataset.case_ids == (
         "BraTS-GLI-00008-101",
         "BraTS-GLI-00005-100",
+    )
+
+def test_training_patch_dataset_returns_requested_patch_shape():
+    mri = torch.ones(
+        (1, 4, 12, 12, 12),
+        dtype=torch.float32,
+    )
+
+    target = torch.zeros(
+        (1, 12, 12, 12),
+        dtype=torch.uint8,
+    )
+
+    target[
+        :,
+        4:8,
+        4:8,
+        4:8,
+    ] = 1
+
+    base_dataset = TensorDataset(
+        mri,
+        target,
+    )
+
+    dataset = TrainingPatchDataset(
+        base_dataset=base_dataset,
+        spatial_size=(8, 8, 8),
+        positive_probability=1.0,
+        seed=42,
+    )
+
+    patch_mri, patch_target = dataset[0]
+
+    assert patch_mri.shape == (
+        4,
+        8,
+        8,
+        8,
+    )
+
+    assert patch_target.shape == (
+        8,
+        8,
+        8,
+    )
+
+    assert torch.any(
+        patch_target > 0
+    )
+
+def test_training_patch_dataset_replays_same_sequence_with_same_seed():
+    mri = torch.zeros(
+        (1, 4, 12, 12, 12),
+        dtype=torch.float32,
+    )
+
+    target = torch.zeros(
+        (1, 12, 12, 12),
+        dtype=torch.uint8,
+    )
+
+    mri[:, :, 1:11, 1:11, 1:11] = 1.0
+
+    target[:, 2, 2, 2] = 1
+    target[:, 9, 9, 9] = 1
+
+    base_dataset = TensorDataset(
+        mri,
+        target,
+    )
+
+    dataset_a = TrainingPatchDataset(
+        base_dataset=base_dataset,
+        spatial_size=(4, 4, 4),
+        positive_probability=1.0,
+        seed=42,
+    )
+
+    dataset_b = TrainingPatchDataset(
+        base_dataset=base_dataset,
+        spatial_size=(4, 4, 4),
+        positive_probability=1.0,
+        seed=42,
+    )
+
+    first_a = dataset_a[0]
+    second_a = dataset_a[0]
+
+    first_b = dataset_b[0]
+    second_b = dataset_b[0]
+
+    assert torch.equal(
+        first_a[0],
+        first_b[0],
+    )
+    assert torch.equal(
+        first_a[1],
+        first_b[1],
+    )
+
+    assert torch.equal(
+        second_a[0],
+        second_b[0],
+    )
+    assert torch.equal(
+        second_a[1],
+        second_b[1],
     )
