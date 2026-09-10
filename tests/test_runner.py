@@ -453,3 +453,40 @@ def test_run_baseline_epochs_calls_epoch_completion_callback(
     assert first_call.args[1] == 1.5
     assert second_call.args[1] == 1.5
     assert third_call.args[1] == 1.2
+
+def test_run_baseline_epochs_reports_epoch_progress(
+    monkeypatch,
+    capsys,
+):
+    experiment = SimpleNamespace(
+        model=object(),
+        optimizer=object(),
+        train_loader=object(),
+        validation_loader=object(),
+        config=SimpleNamespace(
+            patch_size=(96, 96, 96),
+            validation_overlap=0.25,
+        ),
+    )
+
+    monkeypatch.setattr(
+        "src.training.runner.train_one_epoch",
+        lambda model, optimizer, dataloader: 1.234567,
+    )
+
+    monkeypatch.setattr(
+        "src.training.runner.evaluate_sliding_window_epoch",
+        lambda model, dataloader, roi_size, overlap: 0.987654,
+    )
+
+    run_baseline_epochs(
+        experiment=experiment,
+        num_epochs=1,
+    )
+
+    captured = capsys.readouterr()
+
+    assert "Epoch 1/1 started" in captured.out
+    assert "Epoch 1/1 complete" in captured.out
+    assert "train_loss=1.234567" in captured.out
+    assert "validation_loss=0.987654" in captured.out

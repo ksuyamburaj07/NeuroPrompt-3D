@@ -19,6 +19,7 @@ def test_parse_arguments_reads_baseline_training_options():
             "5",
             "--device",
             "cpu",
+            "--resume",
         ]
     )
 
@@ -36,6 +37,21 @@ def test_parse_arguments_reads_baseline_training_options():
 
     assert args.num_epochs == 5
     assert args.device == "cpu"
+    assert args.resume is True
+
+def test_parse_arguments_defaults_resume_to_false():
+    args = parse_arguments(
+        [
+            "--cases-root",
+            "/data/brats/cases",
+            "--manifest-path",
+            "splits/frozen.json",
+            "--output-dir",
+            "outputs/baseline",
+        ]
+    )
+
+    assert args.resume is False
 
 def test_main_builds_and_runs_baseline_training(
     tmp_path,
@@ -101,6 +117,7 @@ def test_main_builds_and_runs_baseline_training(
     run_training_mock.assert_called_once_with(
         experiment=experiment,
         output_dir=output_dir,
+        resume=False,
     )
 
 def test_main_rejects_missing_cases_root_before_building_experiment(
@@ -172,6 +189,7 @@ def test_main_rejects_missing_manifest_before_building_experiment(
     missing_manifest_path = (
         tmp_path / "missing_split.json"
     )
+
 
     output_dir = (
         tmp_path / "baseline_output"
@@ -251,6 +269,58 @@ def test_main_rejects_cases_root_that_is_not_directory(
         )
 
     build_experiment_mock.assert_not_called()
+
+
+def test_main_forwards_resume_true(
+    tmp_path,
+    monkeypatch,
+):
+    experiment = SimpleNamespace()
+
+    build_experiment_mock = Mock(
+        return_value=experiment,
+    )
+
+    run_training_mock = Mock()
+
+    monkeypatch.setattr(
+        "src.training.cli.build_baseline_experiment",
+        build_experiment_mock,
+    )
+
+    monkeypatch.setattr(
+        "src.training.cli.run_baseline_training",
+        run_training_mock,
+    )
+
+    cases_root = tmp_path / "cases"
+    manifest_path = tmp_path / "frozen_split.json"
+    output_dir = tmp_path / "baseline_output"
+
+    cases_root.mkdir()
+
+    manifest_path.write_text(
+        "{}",
+        encoding="utf-8",
+    )
+
+    main(
+        [
+            "--cases-root",
+            str(cases_root),
+            "--manifest-path",
+            str(manifest_path),
+            "--output-dir",
+            str(output_dir),
+            "--resume",
+        ]
+    )
+
+    run_training_mock.assert_called_once_with(
+        experiment=experiment,
+        output_dir=output_dir,
+        resume=True,
+    )
 
 def test_main_rejects_manifest_path_that_is_not_file(
     tmp_path,

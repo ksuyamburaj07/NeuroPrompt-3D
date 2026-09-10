@@ -39,6 +39,11 @@ def run_baseline_epochs(
     )
 
     for epoch in range(start_epoch, num_epochs + 1):
+        print(
+            f"Epoch {epoch}/{num_epochs} started",
+            flush=True,
+        )
+
         train_loss = train_one_epoch(
             model=experiment.model,
             optimizer=experiment.optimizer,
@@ -50,6 +55,13 @@ def run_baseline_epochs(
             dataloader=experiment.validation_loader,
             roi_size=experiment.config.patch_size,
             overlap=experiment.config.validation_overlap,
+        )
+
+        print(
+            f"Epoch {epoch}/{num_epochs} complete - "
+            f"train_loss={train_loss:.6f} - "
+            f"validation_loss={validation_loss:.6f}",
+            flush=True,
         )
 
         history.append(

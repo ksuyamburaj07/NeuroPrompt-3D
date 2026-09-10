@@ -56,6 +56,12 @@ def parse_arguments(
         help="Training device.",
     )
 
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume training from the latest saved checkpoint.",
+    )
+
     return parser.parse_args(argv)
 
 def main(
@@ -99,6 +105,7 @@ def main(
     run_baseline_training(
         experiment=experiment,
         output_dir=args.output_dir,
+        resume=args.resume,
     )
 
 if __name__ == "__main__":

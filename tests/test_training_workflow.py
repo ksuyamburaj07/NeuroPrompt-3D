@@ -396,3 +396,76 @@ def test_run_baseline_training_persists_latest_state_after_each_epoch(
         .kwargs["history"]
         == history_epoch_2
     )
+
+def test_run_baseline_training_saves_history_before_latest_checkpoint(
+    tmp_path,
+    monkeypatch,
+):
+    events = []
+
+    epoch_result = EpochResult(
+        epoch=1,
+        train_loss=1.2,
+        validation_loss=1.3,
+    )
+
+    def fake_run_baseline_epochs(
+        experiment,
+        num_epochs,
+        checkpoint_path,
+        on_epoch_complete,
+    ):
+        on_epoch_complete(
+            [epoch_result],
+            1.3,
+        )
+
+        return [epoch_result]
+
+    def fake_save_history(
+        path,
+        history,
+    ):
+        events.append("history")
+
+    def fake_save_checkpoint(**kwargs):
+        events.append("checkpoint")
+
+    monkeypatch.setattr(
+        "src.training.workflow.run_baseline_epochs",
+        fake_run_baseline_epochs,
+    )
+
+    monkeypatch.setattr(
+        "src.training.workflow.save_training_history",
+        fake_save_history,
+    )
+
+    monkeypatch.setattr(
+        "src.training.workflow.save_training_checkpoint",
+        fake_save_checkpoint,
+    )
+
+    monkeypatch.setattr(
+        "src.training.workflow.capture_training_random_state",
+        lambda train_loader: {},
+    )
+
+    experiment = SimpleNamespace(
+        model=object(),
+        optimizer=object(),
+        train_loader=object(),
+        config=SimpleNamespace(
+            num_epochs=1,
+        ),
+    )
+
+    run_baseline_training(
+        experiment=experiment,
+        output_dir=tmp_path,
+    )
+
+    assert events == [
+        "history",
+        "checkpoint",
+    ]

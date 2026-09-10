@@ -2,7 +2,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import torch
-
+import os
 from src.training.config import BaselineTrainingConfig
 
 
@@ -37,10 +37,52 @@ def save_training_checkpoint(
         "training_random_state": random_state,
     }
 
-    torch.save(
-        checkpoint,
-        checkpoint_path,
+    temporary_path = checkpoint_path.with_name(
+        f".{checkpoint_path.name}.tmp"
     )
+
+    try:
+        torch.save(
+            checkpoint,
+            temporary_path,
+        )
+
+        os.replace(
+            temporary_path,
+            checkpoint_path,
+        )
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+
+def read_training_checkpoint(
+    path: str | Path,
+    map_location: str | torch.device = "cpu",
+) -> dict:
+    """Read a trusted training checkpoint without restoring state."""
+    checkpoint_path = Path(path)
+
+    return torch.load(
+        checkpoint_path,
+        map_location=map_location,
+        weights_only=False,
+    )
+
+
+def restore_training_checkpoint_state(
+    checkpoint: dict,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+) -> None:
+    """Restore model and optimizer state from a loaded checkpoint."""
+    model.load_state_dict(
+        checkpoint["model_state_dict"]
+    )
+
+    optimizer.load_state_dict(
+        checkpoint["optimizer_state_dict"]
+    )
+
 
 def load_training_checkpoint(
     path: str | Path,
@@ -48,21 +90,16 @@ def load_training_checkpoint(
     optimizer: torch.optim.Optimizer,
     map_location: str | torch.device = "cpu",
 ) -> dict:
-    """Load a training checkpoint and restore model and optimizer state."""
-    checkpoint_path = Path(path)
-
-    checkpoint = torch.load(
-        checkpoint_path,
+    """Load a checkpoint and restore model and optimizer state."""
+    checkpoint = read_training_checkpoint(
+        path=path,
         map_location=map_location,
-        weights_only=False,
     )
 
-    model.load_state_dict(
-        checkpoint["model_state_dict"]
-    )
-
-    optimizer.load_state_dict(
-        checkpoint["optimizer_state_dict"]
+    restore_training_checkpoint_state(
+        checkpoint=checkpoint,
+        model=model,
+        optimizer=optimizer,
     )
 
     return checkpoint
