@@ -12,7 +12,7 @@ from src.training.runner import EpochResult
 from src.training.workflow import run_baseline_training
 
 
-def test_run_baseline_training_saves_checkpoint_and_history(
+def test_run_baseline_training_configures_epoch_persistence_callback(
     tmp_path,
     monkeypatch,
 ):
@@ -58,20 +58,22 @@ def test_run_baseline_training_saves_checkpoint_and_history(
 
     assert returned_history == history
 
-    run_epochs_mock.assert_called_once_with(
-        experiment=experiment,
-        num_epochs=2,
-        checkpoint_path=(
-            tmp_path / "best_baseline.pt"
-        ),
+    run_epochs_mock.assert_called_once()
+
+    call_kwargs = run_epochs_mock.call_args.kwargs
+
+    assert call_kwargs["experiment"] is experiment
+    assert call_kwargs["num_epochs"] == 2
+
+    assert call_kwargs["checkpoint_path"] == (
+        tmp_path / "best_baseline.pt"
     )
 
-    save_history_mock.assert_called_once_with(
-        path=(
-            tmp_path / "training_history.json"
-        ),
-        history=history,
+    assert callable(
+        call_kwargs["on_epoch_complete"]
     )
+
+    save_history_mock.assert_not_called()
 
 def test_run_baseline_training_creates_real_output_files(
     tmp_path,
@@ -112,6 +114,27 @@ def test_run_baseline_training_creates_real_output_files(
         fake_evaluate_sliding_window_epoch,
     )
 
+    random_state = {
+        "torch_cpu_rng_state": torch.tensor(
+            [1, 2, 3],
+            dtype=torch.uint8,
+        ),
+        "torch_cuda_rng_state_all": None,
+        "shuffle_generator_state": torch.tensor(
+            [4, 5, 6],
+            dtype=torch.uint8,
+        ),
+        "patch_generator_state": torch.tensor(
+            [7, 8, 9],
+            dtype=torch.uint8,
+        ),
+    }
+
+    monkeypatch.setattr(
+        "src.training.workflow.capture_training_random_state",
+        lambda train_loader: random_state,
+    )
+
     config = BaselineTrainingConfig(
         base_channels=2,
         device="cpu",
@@ -145,26 +168,69 @@ def test_run_baseline_training_creates_real_output_files(
         output_dir=output_dir,
     )
 
-    checkpoint_path = (
+    best_checkpoint_path = (
         output_dir / "best_baseline.pt"
+    )
+
+    latest_checkpoint_path = (
+        output_dir / "latest_baseline.pt"
     )
 
     history_path = (
         output_dir / "training_history.json"
     )
 
-    assert checkpoint_path.exists()
+    assert best_checkpoint_path.exists()
+    assert latest_checkpoint_path.exists()
     assert history_path.exists()
 
-    checkpoint = torch.load(
-        checkpoint_path,
+    best_checkpoint = torch.load(
+        best_checkpoint_path,
         map_location="cpu",
         weights_only=False,
     )
 
-    assert checkpoint["epoch"] == 2
-    assert checkpoint["train_loss"] == 1.2
-    assert checkpoint["validation_loss"] == 1.3
+    latest_checkpoint = torch.load(
+        latest_checkpoint_path,
+        map_location="cpu",
+        weights_only=False,
+    )
+
+    assert best_checkpoint["epoch"] == 2
+    assert best_checkpoint["train_loss"] == 1.2
+    assert best_checkpoint["validation_loss"] == 1.3
+
+    assert latest_checkpoint["epoch"] == 2
+    assert latest_checkpoint["train_loss"] == 1.2
+    assert latest_checkpoint["validation_loss"] == 1.3
+    assert (
+        latest_checkpoint["best_validation_loss"]
+        == 1.3
+    )
+
+    saved_random_state = (
+        latest_checkpoint["training_random_state"]
+    )
+
+    assert torch.equal(
+        saved_random_state["torch_cpu_rng_state"],
+        random_state["torch_cpu_rng_state"],
+    )
+
+    assert (
+        saved_random_state["torch_cuda_rng_state_all"]
+        is None
+    )
+
+    assert torch.equal(
+        saved_random_state["shuffle_generator_state"],
+        random_state["shuffle_generator_state"],
+    )
+
+    assert torch.equal(
+        saved_random_state["patch_generator_state"],
+        random_state["patch_generator_state"],
+    )
 
     with history_path.open(
         "r",
@@ -180,3 +246,153 @@ def test_run_baseline_training_creates_real_output_files(
         "train_loss": 1.2,
         "validation_loss": 1.3,
     }
+
+def test_run_baseline_training_persists_latest_state_after_each_epoch(
+    tmp_path,
+    monkeypatch,
+):
+    history_epoch_1 = [
+        EpochResult(
+            epoch=1,
+            train_loss=1.4,
+            validation_loss=1.5,
+        ),
+    ]
+
+    history_epoch_2 = [
+        EpochResult(
+            epoch=1,
+            train_loss=1.4,
+            validation_loss=1.5,
+        ),
+        EpochResult(
+            epoch=2,
+            train_loss=1.2,
+            validation_loss=1.3,
+        ),
+    ]
+
+    def fake_run_baseline_epochs(
+        experiment,
+        num_epochs,
+        checkpoint_path,
+        on_epoch_complete,
+    ):
+        on_epoch_complete(
+            history_epoch_1,
+            1.5,
+        )
+
+        on_epoch_complete(
+            history_epoch_2,
+            1.3,
+        )
+
+        return history_epoch_2
+
+    save_checkpoint_mock = Mock()
+    save_history_mock = Mock()
+
+    random_state = {
+        "example": "state",
+    }
+
+    capture_random_state_mock = Mock(
+        return_value=random_state,
+    )
+
+    monkeypatch.setattr(
+        "src.training.workflow.run_baseline_epochs",
+        fake_run_baseline_epochs,
+    )
+
+    monkeypatch.setattr(
+        "src.training.workflow.save_training_checkpoint",
+        save_checkpoint_mock,
+    )
+
+    monkeypatch.setattr(
+        "src.training.workflow.save_training_history",
+        save_history_mock,
+    )
+
+    monkeypatch.setattr(
+        "src.training.workflow.capture_training_random_state",
+        capture_random_state_mock,
+    )
+
+    experiment = SimpleNamespace(
+        model=object(),
+        optimizer=object(),
+        train_loader=object(),
+        config=SimpleNamespace(
+            num_epochs=2,
+        ),
+    )
+
+    returned_history = run_baseline_training(
+        experiment=experiment,
+        output_dir=tmp_path,
+    )
+
+    assert returned_history == history_epoch_2
+
+    assert capture_random_state_mock.call_count == 2
+
+    assert save_checkpoint_mock.call_count == 2
+
+    first_checkpoint_call = (
+        save_checkpoint_mock.call_args_list[0]
+    )
+
+    second_checkpoint_call = (
+        save_checkpoint_mock.call_args_list[1]
+    )
+
+    assert first_checkpoint_call.kwargs[
+        "path"
+    ] == (
+        tmp_path / "latest_baseline.pt"
+    )
+
+    assert first_checkpoint_call.kwargs[
+        "epoch"
+    ] == 1
+
+    assert first_checkpoint_call.kwargs[
+        "train_loss"
+    ] == 1.4
+
+    assert first_checkpoint_call.kwargs[
+        "validation_loss"
+    ] == 1.5
+
+    assert first_checkpoint_call.kwargs[
+        "best_validation_loss"
+    ] == 1.5
+
+    assert first_checkpoint_call.kwargs[
+        "random_state"
+    ] is random_state
+
+    assert second_checkpoint_call.kwargs[
+        "epoch"
+    ] == 2
+
+    assert second_checkpoint_call.kwargs[
+        "best_validation_loss"
+    ] == 1.3
+
+    assert save_history_mock.call_count == 2
+
+    assert (
+        save_history_mock.call_args_list[0]
+        .kwargs["history"]
+        == history_epoch_1
+    )
+
+    assert (
+        save_history_mock.call_args_list[1]
+        .kwargs["history"]
+        == history_epoch_2
+    )

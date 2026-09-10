@@ -233,3 +233,223 @@ def test_run_baseline_epochs_does_not_overwrite_best_on_equal_loss(
 
     assert saved_checkpoint.kwargs["epoch"] == 1
     assert saved_checkpoint.kwargs["validation_loss"] == 1.2
+
+def test_run_baseline_epochs_can_start_from_resumed_epoch(
+    monkeypatch,
+):
+    train_losses = iter([
+        1.0,
+        0.9,
+    ])
+
+    validation_losses = iter([
+        1.1,
+        1.0,
+    ])
+
+    def fake_train_one_epoch(
+        model,
+        optimizer,
+        dataloader,
+    ):
+        return next(train_losses)
+
+    def fake_evaluate_sliding_window_epoch(
+        model,
+        dataloader,
+        roi_size,
+        overlap,
+    ):
+        return next(validation_losses)
+
+    monkeypatch.setattr(
+        "src.training.runner.train_one_epoch",
+        fake_train_one_epoch,
+    )
+
+    monkeypatch.setattr(
+        "src.training.runner.evaluate_sliding_window_epoch",
+        fake_evaluate_sliding_window_epoch,
+    )
+
+    experiment = SimpleNamespace(
+        model=object(),
+        optimizer=object(),
+        train_loader=object(),
+        validation_loader=object(),
+        config=SimpleNamespace(
+            patch_size=(96, 96, 96),
+            validation_overlap=0.25,
+        ),
+    )
+
+    history = run_baseline_epochs(
+        experiment=experiment,
+        num_epochs=5,
+        start_epoch=4,
+    )
+
+    assert [
+        result.epoch
+        for result in history
+    ] == [
+        4,
+        5,
+    ]
+
+def test_run_baseline_epochs_preserves_best_loss_from_before_resume(
+    monkeypatch,
+    tmp_path,
+):
+    train_losses = iter([
+        1.0,
+        0.9,
+    ])
+
+    validation_losses = iter([
+        1.1,
+        1.0,
+    ])
+
+    def fake_train_one_epoch(
+        model,
+        optimizer,
+        dataloader,
+    ):
+        return next(train_losses)
+
+    def fake_evaluate_sliding_window_epoch(
+        model,
+        dataloader,
+        roi_size,
+        overlap,
+    ):
+        return next(validation_losses)
+
+    checkpoint_mock = Mock()
+
+    monkeypatch.setattr(
+        "src.training.runner.train_one_epoch",
+        fake_train_one_epoch,
+    )
+
+    monkeypatch.setattr(
+        "src.training.runner.evaluate_sliding_window_epoch",
+        fake_evaluate_sliding_window_epoch,
+    )
+
+    monkeypatch.setattr(
+        "src.training.runner.save_training_checkpoint",
+        checkpoint_mock,
+    )
+
+    experiment = SimpleNamespace(
+        model=object(),
+        optimizer=object(),
+        train_loader=object(),
+        validation_loader=object(),
+        config=SimpleNamespace(
+            patch_size=(96, 96, 96),
+            validation_overlap=0.25,
+        ),
+    )
+
+    run_baseline_epochs(
+        experiment=experiment,
+        num_epochs=6,
+        checkpoint_path=(
+            tmp_path / "best_baseline.pt"
+        ),
+        start_epoch=5,
+        initial_best_validation_loss=0.8,
+    )
+
+    checkpoint_mock.assert_not_called()
+
+def test_run_baseline_epochs_calls_epoch_completion_callback(
+    monkeypatch,
+):
+    train_losses = iter([
+        1.4,
+        1.3,
+        1.1,
+    ])
+
+    validation_losses = iter([
+        1.5,
+        1.6,
+        1.2,
+    ])
+
+    def fake_train_one_epoch(
+        model,
+        optimizer,
+        dataloader,
+    ):
+        return next(train_losses)
+
+    def fake_evaluate_sliding_window_epoch(
+        model,
+        dataloader,
+        roi_size,
+        overlap,
+    ):
+        return next(validation_losses)
+
+    monkeypatch.setattr(
+        "src.training.runner.train_one_epoch",
+        fake_train_one_epoch,
+    )
+
+    monkeypatch.setattr(
+        "src.training.runner.evaluate_sliding_window_epoch",
+        fake_evaluate_sliding_window_epoch,
+    )
+
+    callback_mock = Mock()
+
+    experiment = SimpleNamespace(
+        model=object(),
+        optimizer=object(),
+        train_loader=object(),
+        validation_loader=object(),
+        config=SimpleNamespace(
+            patch_size=(96, 96, 96),
+            validation_overlap=0.25,
+        ),
+    )
+
+    run_baseline_epochs(
+        experiment=experiment,
+        num_epochs=3,
+        on_epoch_complete=callback_mock,
+    )
+
+    assert callback_mock.call_count == 3
+
+    first_call = callback_mock.call_args_list[0]
+    second_call = callback_mock.call_args_list[1]
+    third_call = callback_mock.call_args_list[2]
+
+    first_history = first_call.args[0]
+    second_history = second_call.args[0]
+    third_history = third_call.args[0]
+
+    assert [
+        result.epoch
+        for result in first_history
+    ] == [1]
+
+    assert [
+        result.epoch
+        for result in second_history
+    ] == [1, 2]
+
+    assert [
+        result.epoch
+        for result in third_history
+    ] == [1, 2, 3]
+
+    assert first_call.args[1] == 1.5
+    assert second_call.args[1] == 1.5
+    assert third_call.args[1] == 1.2

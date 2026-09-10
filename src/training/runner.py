@@ -22,6 +22,9 @@ def run_baseline_epochs(
     experiment,
     num_epochs: int,
     checkpoint_path: str | Path | None = None,
+    start_epoch: int = 1,
+    initial_best_validation_loss: float = float("inf"),
+    on_epoch_complete=None,
 ) -> list[EpochResult]:
     """Run baseline training and validation for multiple epochs."""
 
@@ -31,9 +34,11 @@ def run_baseline_epochs(
         )
 
     history: list[EpochResult] = []
-    best_validation_loss = float("inf")
+    best_validation_loss = (
+        initial_best_validation_loss
+    )
 
-    for epoch in range(1, num_epochs + 1):
+    for epoch in range(start_epoch, num_epochs + 1):
         train_loss = train_one_epoch(
             model=experiment.model,
             optimizer=experiment.optimizer,
@@ -68,5 +73,11 @@ def run_baseline_epochs(
                     validation_loss=validation_loss,
                     config=experiment.config,
                 )
+
+        if on_epoch_complete is not None:
+            on_epoch_complete(
+                list(history),
+                best_validation_loss,
+            )
 
     return history
