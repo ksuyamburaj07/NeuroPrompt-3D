@@ -24,3 +24,9 @@ checkpoints/
 *.pth
 *.ckpt
 BraTS*.zip
+
+# Local research evidence, executed notebooks, and transfer bundles
+
+archives/
+notebooks/
+exports/
