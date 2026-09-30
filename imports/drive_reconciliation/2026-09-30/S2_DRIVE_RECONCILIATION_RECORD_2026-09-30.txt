@@ -1,0 +1,50 @@
+NeuroPrompt-3D
+S2 DRIVE RECONCILIATION RECORD
+
+Date:
+2026-09-30
+
+Status:
+COMPLETE
+
+Recovered files:
+6
+
+Purpose:
+Preserve early milestone artifacts that were observed
+on Google Drive but were not found as ordinary local
+files or in the scoped small evidence archives.
+
+Destination:
+/data/Projects/Project_03/imports/drive_reconciliation/2026-09-30
+
+Important:
+These are provenance imports only.
+
+They DO NOT replace:
+- later baseline checkpoints
+- frozen notebooks
+- M9E evidence
+- M10 evidence
+- canonical outputs
+
+Canonical files overwritten:
+NO
+
+Canonical files moved:
+NO
+
+Canonical files deleted:
+NO
+
+Inference rerun:
+NO
+
+Retraining:
+NO
+
+Policy tuning:
+NO
+
+NEXT:
+S3 NOTEBOOK VERSION RECONCILIATION

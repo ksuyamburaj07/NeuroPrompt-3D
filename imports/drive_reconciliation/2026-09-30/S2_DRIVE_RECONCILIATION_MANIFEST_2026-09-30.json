@@ -1,0 +1,81 @@
+{
+  "date": "2026-09-30",
+  "file_count": 6,
+  "files": [
+    {
+      "canonical_replacement": false,
+      "drive_file_id": "19d4ytFe0AdFopbvzCj_mkiumTvBWUsIw",
+      "drive_listed_size_bytes": 4166,
+      "local_sha256": "9722aaf67a92448363ba4c2efec199c8759e090b0436ecbccc9867af083e8012",
+      "local_size_bytes": 4166,
+      "provenance_import_only": true,
+      "relative_path": "M7K_B2_T4_Feasibility_Benchmark/benchmark_7kb2_t4_results.json",
+      "source": "Google Drive NeuroPrompt-3D project"
+    },
+    {
+      "canonical_replacement": false,
+      "drive_file_id": "1W9sabKPt0flpcJgHPFCBdAoNEdN-BDMO",
+      "drive_listed_size_bytes": 1048671,
+      "local_sha256": "c3f837de2a5f03f5b44abdf0cdd3bf54a4e7e52b30b5c3de5d5c62a67e0309a0",
+      "local_size_bytes": 1048671,
+      "provenance_import_only": true,
+      "relative_path": "M7K_A_CUDA_Resume_Smoke/best_baseline.pt",
+      "source": "Google Drive NeuroPrompt-3D project"
+    },
+    {
+      "canonical_replacement": false,
+      "drive_file_id": "1mOlhkG987uFqT7aP0l96-XsZvfQ9KytQ",
+      "drive_listed_size_bytes": 1065295,
+      "local_sha256": "cef60be3694b01605a47f99ed26ac99ba6a93776bb974e6b2105b659cdc3b7b1",
+      "local_size_bytes": 1065295,
+      "provenance_import_only": true,
+      "relative_path": "M7K_A_CUDA_Resume_Smoke/latest_baseline.pt",
+      "source": "Google Drive NeuroPrompt-3D project"
+    },
+    {
+      "canonical_replacement": false,
+      "drive_file_id": "1ORrMd3vV63yguLIu3frOflNhKTzj5BSn",
+      "drive_listed_size_bytes": 212,
+      "local_sha256": "e6afc06522b0d1c0dba78ea2a6080eb883b3a739ed367dcade4c9d0cfd0a66dd",
+      "local_size_bytes": 212,
+      "provenance_import_only": true,
+      "relative_path": "M7K_A_CUDA_Resume_Smoke/training_history.json",
+      "source": "Google Drive NeuroPrompt-3D project"
+    },
+    {
+      "canonical_replacement": false,
+      "drive_file_id": "1EqaFvyYvV8xk-2e6FP6Z_QieZTWw7o-P",
+      "drive_listed_size_bytes": 1048327,
+      "local_sha256": "d7e2270dc655f014f3a1674dbb124f0d8242db22daa3396cacb354ac818c07fc",
+      "local_size_bytes": 1048327,
+      "provenance_import_only": true,
+      "relative_path": "M7J_GPU_Smoke_2026-09-10/best_baseline.pt",
+      "source": "Google Drive NeuroPrompt-3D project"
+    },
+    {
+      "canonical_replacement": false,
+      "drive_file_id": "1T5pxs97yUfYXwhm8R0SvjVaHAEoeGOMv",
+      "drive_listed_size_bytes": 107,
+      "local_sha256": "c31771f6b2970e7a1ee2e4672debd2b16dbbdafd96ba3bfb0bd90328c5d3bf94",
+      "local_size_bytes": 107,
+      "provenance_import_only": true,
+      "relative_path": "M7J_GPU_Smoke_2026-09-10/training_history.json",
+      "source": "Google Drive NeuroPrompt-3D project"
+    }
+  ],
+  "import_root": "/data/Projects/Project_03/imports/drive_reconciliation/2026-09-30",
+  "interpretation": "These files are provenance-preserving imports. They do not replace later same-named checkpoints or outputs.",
+  "purpose": "Recover early milestone artifacts observed on Google Drive but absent from the scoped local ordinary-file/archive inventory.",
+  "schema": "NeuroPrompt3D_S2_DriveReconciliation_v1",
+  "scientific_boundary": {
+    "canonical_files_deleted": false,
+    "canonical_files_moved": false,
+    "canonical_files_overwritten": false,
+    "frozen_m10_modified": false,
+    "frozen_m9e_modified": false,
+    "inference_rerun": false,
+    "policy_tuning": false,
+    "retraining": false
+  },
+  "status": "COMPLETE"
+}

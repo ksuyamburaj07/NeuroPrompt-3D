@@ -1,0 +1,72 @@
+NeuroPrompt-3D
+S3 NOTEBOOK VERSION RECONCILIATION
+
+Date:
+2026-09-30
+
+Status:
+COMPLETE
+
+Local notebooks fingerprinted:
+42
+
+Project:
+37
+
+Downloads:
+1
+
+Trash:
+4
+
+JSON parse failures:
+0
+
+Drive notebooks compared:
+15
+
+Preserved legacy working copies:
+4
+
+M7KD2 Trash copy:
+EXACT DUPLICATE OF CANONICAL PROJECT NOTEBOOK
+
+Frozen M9E notebook loss detected:
+NO
+
+Frozen M10 notebook loss detected:
+NO
+
+Authority:
+Frozen evidence records and designated
+ACTUAL_COLAB_RUN notebooks remain authoritative.
+
+File size or timestamp alone:
+NOT USED TO SELECT AUTHORITY
+
+Canonical notebooks modified:
+NO
+
+Canonical notebooks overwritten:
+NO
+
+Trash deleted:
+NO
+
+Downloads deleted:
+NO
+
+Inference rerun:
+NO
+
+Retraining:
+NO
+
+Policy tuning:
+NO
+
+S3:
+COMPLETE
+
+NEXT:
+MILESTONE MAP + GITHUB CHECKPOINT

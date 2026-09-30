@@ -1,0 +1,119 @@
+{
+  "additional_local_finding": {
+    "trash_M7KD2": "Exact SHA256 duplicate of canonical project M7KD2 notebook; no unique content detected."
+  },
+  "authority_rule": "Frozen evidence records and designated ACTUAL_COLAB_RUN notebooks remain authoritative. File size/timestamp alone does not determine authority.",
+  "conclusion": "No missing frozen M9E/M10 execution notebook was identified. Differing Drive files are accounted for by metadata/serialization, execution-state differences, or preserved development predecessors.",
+  "date": "2026-09-30",
+  "drive_comparisons": [
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_7KA_CUDA_Resume_Smoke_2026-09-11.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_7KB2_T4_Feasibility_Benchmark_2026_09_11.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_7KB3_MultiCase_Representativeness_Benchmark_2026_09_11.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_M7J_GPU_Smoke_2026-09-10.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PRESERVED_LEGACY_COPY_PROJECT_HAS_LATER_DIFFERENT_VERSION",
+      "drive_name": "NeuroPrompt3D_M7KB4_M7KC_Full_Data_Staging_and_Baseline_Training_2026-09-13.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_M7KC_Baseline_Training_Resume_2026_09_13.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_M8B2_9Case_MC_Dropout_Characterization_2026_09_13.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_M9A4_SAM_Med3D_OneCase_GPU_Smoke_Test_2026_09_15.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_M9B2_9Case_PreGT_SAM_Branch_Output_Freeze_2026_09_15.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_M9C4B_GPU_End_to_End_Smoke_2026_09_23.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PROJECT_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "NeuroPrompt3D_M9D1_PreGT_12Case_Prediction_Freeze_2026_09_23.ipynb"
+    },
+    {
+      "classification": "SOURCE_AND_OUTPUT_MATCH_ACTUAL_COLAB_RUN_EXECUTION_COUNTS_DIFFER",
+      "drive_name": "NeuroPrompt3D_M9E2_PreGT_129Case_FinalTest_Inference_2026_09_28.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_ACTUAL_COLAB_RUN",
+      "drive_name": "NeuroPrompt3D_M9E2_PreGT_129Case_FinalTest_Inference_AMENDMENT_A_2026_09_29.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_ACTUAL_COLAB_RUN",
+      "drive_name": "NeuroPrompt3D_M9E3_PreGT_Global_Prediction_Freeze_2026_09_29.ipynb"
+    },
+    {
+      "classification": "SEMANTIC_MATCH_PRESERVED_DOWNLOAD_COPY_METADATA_OR_SERIALIZATION_DIFF",
+      "drive_name": "null_findings_0.ipynb"
+    }
+  ],
+  "drive_notebooks_compared": 15,
+  "local_fingerprint_report": {
+    "downloads_notebooks": 1,
+    "parse_failures": 0,
+    "path": "/data/Projects/Project_03/imports/notebook_reconciliation/2026-09-30/S3_LOCAL_NOTEBOOK_FINGERPRINTS_2026-09-30.json",
+    "project_notebooks": 37,
+    "sha256": "869a767c80250121671459a212870155686c89ad22c57c887de9a12651dbe838",
+    "total_notebooks": 42,
+    "trash_notebooks": 4
+  },
+  "preserved_legacy_working_copies": [
+    {
+      "bytes": 93883,
+      "name": "NeuroPrompt3D_7KB4_C_FullDataset_Staging_2026_09_11.ipynb",
+      "preserved_as": "legacy_working_copy",
+      "sha256": "75202040224629b48f7cb7b66f863a402aaad0e53da77b5f1b9dca2157453a0c"
+    },
+    {
+      "bytes": 17267,
+      "name": "NeuroPrompt3D_7KB4_FullDataset_Staging_2026_09_11.ipynb",
+      "preserved_as": "legacy_working_copy",
+      "sha256": "759dde89a9857b0dd1326e73f040bc98c40fb55e6a9eb90158f29b4fed519f26"
+    },
+    {
+      "bytes": 127774,
+      "name": "NeuroPrompt3D_M7KB4_M7KC_Full_Data_Staging_and_Baseline_Training_2026_09_13.ipynb",
+      "preserved_as": "legacy_working_copy",
+      "sha256": "87367e1a764e412ffb110bdc765f8ec5856b1c0265aee07cb1bdf6eea799162b"
+    },
+    {
+      "bytes": 3305,
+      "name": "null_findings_0.ipynb",
+      "preserved_as": "legacy_working_copy",
+      "sha256": "a2bfdc316f33c4cd52d26157ac48ba04db4903f2435c592c7dec94162028e5f7"
+    }
+  ],
+  "schema": "NeuroPrompt3D_S3_NotebookReconciliation_v1",
+  "scientific_boundary": {
+    "canonical_notebooks_deleted": false,
+    "canonical_notebooks_modified": false,
+    "canonical_notebooks_overwritten": false,
+    "downloads_deleted": false,
+    "inference_rerun": false,
+    "policy_tuning": false,
+    "retraining": false,
+    "threshold_modified": false,
+    "trash_deleted": false
+  },
+  "status": "COMPLETE"
+}

@@ -30,3 +30,18 @@ BraTS*.zip
 archives/
 notebooks/
 exports/
+
+# Pre-M11 reconciliation imports
+#
+# Raw recovered checkpoints, notebooks, fingerprints, benchmark payloads,
+# and other reconciliation artifacts remain local/backup evidence.
+# Git tracks only the compact S2/S3 reconciliation manifests and records.
+imports/**
+!imports/drive_reconciliation/
+!imports/drive_reconciliation/2026-09-30/
+!imports/drive_reconciliation/2026-09-30/S2_DRIVE_RECONCILIATION_MANIFEST_2026-09-30.json
+!imports/drive_reconciliation/2026-09-30/S2_DRIVE_RECONCILIATION_RECORD_2026-09-30.txt
+!imports/notebook_reconciliation/
+!imports/notebook_reconciliation/2026-09-30/
+!imports/notebook_reconciliation/2026-09-30/S3_NOTEBOOK_RECONCILIATION_MANIFEST_2026-09-30.json
+!imports/notebook_reconciliation/2026-09-30/S3_NOTEBOOK_RECONCILIATION_RECORD_2026-09-30.txt
