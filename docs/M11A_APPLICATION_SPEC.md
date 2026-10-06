@@ -522,3 +522,17 @@ file.
 
 The frontend must never construct, receive, or submit arbitrary server
 filesystem paths for live result retrieval.
+
+## Live case deletion lifecycle
+
+`DELETE /api/v1/cases/{case_id}` removes the staged user-uploaded case data.
+
+Deletion is rejected while any associated live inference run is `queued` or
+`running`, because an active worker may still require the staged MRI inputs.
+
+Completed or failed runs do not block case deletion. Their run metadata and
+result artifacts are separate temporary live resources and are not silently
+removed by case deletion.
+
+Automatic session expiry and broader result cleanup remain deferred to a later
+application release, as specified by the temporary-runtime privacy policy.

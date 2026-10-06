@@ -10,6 +10,9 @@ import app.backend.api.runs as runs_api
 from app.backend.core import paths
 from app.backend.schemas.runs import RunRecord
 from app.backend.main import app
+from app.backend.services.run_service import (
+    update_live_run,
+)
 from src.pipeline.policy import (
     FROZEN_VARIANCE_THRESHOLD,
 )
@@ -260,3 +263,92 @@ def test_execute_endpoint_launches_queued_run(
     assert payload["stage"] == "validating"
     assert payload["progress"] == 0.01
     assert payload["worker_pid"] == 12345
+
+
+def test_delete_case_rejects_active_run(
+    tmp_path: Path,
+    isolated_runtime: tuple[Path, Path],
+) -> None:
+    case_id = _create_case(
+        tmp_path
+    )
+
+    create_response = client.post(
+        f"/api/v1/cases/{case_id}/runs"
+    )
+
+    assert create_response.status_code == 201
+
+    run_id = create_response.json()[
+        "run_id"
+    ]
+
+    delete_response = client.delete(
+        f"/api/v1/cases/{case_id}"
+    )
+
+    assert delete_response.status_code == 409
+
+    assert (
+        client.get(
+            f"/api/v1/cases/{case_id}"
+        ).status_code
+        == 200
+    )
+
+    assert (
+        client.get(
+            f"/api/v1/runs/{run_id}"
+        ).status_code
+        == 200
+    )
+
+
+def test_delete_case_after_completed_run_keeps_run(
+    tmp_path: Path,
+    isolated_runtime: tuple[Path, Path],
+) -> None:
+    case_id = _create_case(
+        tmp_path
+    )
+
+    create_response = client.post(
+        f"/api/v1/cases/{case_id}/runs"
+    )
+
+    assert create_response.status_code == 201
+
+    run_id = create_response.json()[
+        "run_id"
+    ]
+
+    update_live_run(
+        run_id,
+        status="complete",
+        stage="complete",
+        progress=1.0,
+    )
+
+    delete_response = client.delete(
+        f"/api/v1/cases/{case_id}"
+    )
+
+    assert delete_response.status_code == 200
+
+    assert (
+        client.get(
+            f"/api/v1/cases/{case_id}"
+        ).status_code
+        == 404
+    )
+
+    # Completed result metadata is a separate live resource.
+    run_response = client.get(
+        f"/api/v1/runs/{run_id}"
+    )
+
+    assert run_response.status_code == 200
+    assert (
+        run_response.json()["status"]
+        == "complete"
+    )

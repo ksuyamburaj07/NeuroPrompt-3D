@@ -14,6 +14,9 @@ from app.backend.services.case_service import (
     load_live_case,
     validate_and_stage_case,
 )
+from app.backend.services.run_service import (
+    active_live_run_ids_for_case,
+)
 
 
 router = APIRouter(tags=["live cases"])
@@ -70,6 +73,22 @@ def delete_case(
     case_id: str,
 ) -> CaseDeleteResponse:
     try:
+        active_run_ids = (
+            active_live_run_ids_for_case(
+                case_id
+            )
+        )
+
+        if active_run_ids:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Live case cannot be deleted "
+                    "while an inference run is "
+                    "queued or running."
+                ),
+            )
+
         deleted = delete_live_case(case_id)
     except ValueError as exc:
         raise HTTPException(

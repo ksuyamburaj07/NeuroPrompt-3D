@@ -250,3 +250,54 @@ def update_live_run(
     )
 
     return updated
+
+
+def active_live_run_ids_for_case(
+    case_id: str,
+) -> list[str]:
+    """Return queued/running live runs associated with one case."""
+
+    paths.ensure_runtime_directories()
+
+    active: list[str] = []
+
+    for run_root in sorted(
+        paths.LIVE_RUNS_ROOT.iterdir()
+    ):
+        if (
+            not run_root.is_dir()
+            or not _RUN_ID_PATTERN.fullmatch(
+                run_root.name
+            )
+        ):
+            continue
+
+        metadata = (
+            run_root
+            / "run.json"
+        )
+
+        if not metadata.is_file():
+            continue
+
+        record = (
+            RunRecord.model_validate_json(
+                metadata.read_text(
+                    encoding="utf-8"
+                )
+            )
+        )
+
+        if (
+            record.case_id == case_id
+            and record.status
+            in {
+                "queued",
+                "running",
+            }
+        ):
+            active.append(
+                record.run_id
+            )
+
+    return active
