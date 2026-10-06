@@ -5,7 +5,10 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+import app.backend.api.runs as runs_api
+
 from app.backend.core import paths
+from app.backend.schemas.runs import RunRecord
 from app.backend.main import app
 from src.pipeline.policy import (
     FROZEN_VARIANCE_THRESHOLD,
@@ -197,3 +200,57 @@ def test_get_run_returns_404_for_unknown_run(
     )
 
     assert response.status_code == 404
+
+
+def test_execute_endpoint_launches_queued_run(
+    tmp_path: Path,
+    isolated_runtime: tuple[Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = _create_case(
+        tmp_path
+    )
+
+    create_response = client.post(
+        f"/api/v1/cases/{case_id}/runs"
+    )
+
+    assert create_response.status_code == 201
+
+    original = RunRecord.model_validate(
+        create_response.json()
+    )
+
+    def fake_launch(
+        run_id: str,
+    ) -> RunRecord:
+        assert run_id == original.run_id
+
+        return original.model_copy(
+            update={
+                "status": "running",
+                "stage": "validating",
+                "progress": 0.01,
+                "worker_pid": 12345,
+            }
+        )
+
+    monkeypatch.setattr(
+        runs_api,
+        "launch_run_worker",
+        fake_launch,
+    )
+
+    response = client.post(
+        f"/api/v1/runs/{original.run_id}/execute"
+    )
+
+    assert response.status_code == 202
+
+    payload = response.json()
+
+    assert payload["run_id"] == original.run_id
+    assert payload["status"] == "running"
+    assert payload["stage"] == "validating"
+    assert payload["progress"] == 0.01
+    assert payload["worker_pid"] == 12345

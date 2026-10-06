@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 
@@ -20,7 +21,28 @@ BASELINE_CHECKPOINT = (
     / "best_baseline.pt"
 )
 
+SAM_SOURCE_ROOT = Path(
+    os.environ.get(
+        "NEUROPROMPT_SAM_SOURCE_ROOT",
+        "/data/Projects/External/SAM-Med3D",
+    )
+)
+
+SAM_CHECKPOINT = Path(
+    os.environ.get(
+        "NEUROPROMPT_SAM_CHECKPOINT",
+        "/data/Projects/Models/SAM-Med3D/sam_med3d_turbo.pth",
+    )
+)
+
 
 def ensure_runtime_directories() -> None:
-    LIVE_CASES_ROOT.mkdir(parents=True, exist_ok=True)
-    LIVE_RUNS_ROOT.mkdir(parents=True, exist_ok=True)
+    LIVE_CASES_ROOT.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    LIVE_RUNS_ROOT.mkdir(
+        parents=True,
+        exist_ok=True,
+    )

@@ -14,6 +14,8 @@ RunStatus = Literal[
 RunStage = Literal[
     "queued",
     "validating",
+    "loading_models",
+    "automatic_pipeline",
     "preprocessing",
     "baseline",
     "mc_dropout",
@@ -47,6 +49,9 @@ class RunRecord(BaseModel):
     updated_at: datetime
 
     frozen_variance_threshold: float
+
+    execution_device: str | None = None
+    worker_pid: int | None = None
 
     action: str | None = None
     gate_state: str | None = None
