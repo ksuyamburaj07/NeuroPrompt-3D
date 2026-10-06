@@ -53,6 +53,9 @@ class RunRecord(BaseModel):
     execution_device: str | None = None
     worker_pid: int | None = None
 
+    inference_case_id: str | None = None
+    mc_case_seed: int | None = None
+
     action: str | None = None
     gate_state: str | None = None
 

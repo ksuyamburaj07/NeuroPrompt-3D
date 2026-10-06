@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -14,6 +15,9 @@ from app.backend.main import app
 from app.backend.services.run_service import (
     create_live_run,
     load_live_run,
+)
+from src.uncertainty.mc_dropout import (
+    derive_case_seed,
 )
 
 
@@ -203,7 +207,9 @@ def _install_fake_models_and_pipeline(
             action="ABSTAIN_BASELINE",
             semantic_abstention_condition=None,
             gate_state="ABSTAIN",
-            case_seed=123,
+            case_seed=derive_case_seed(
+                case_id
+            ),
             mc_pass_hashes=tuple(
                 f"{index:064x}"
                 for index
@@ -264,6 +270,27 @@ def test_execute_live_run_persists_result_artifacts(
         == "cpu"
     )
 
+    assert completed.inference_case_id is not None
+
+    assert (
+        completed.inference_case_id
+        .startswith(
+            "live_sha256_"
+        )
+    )
+
+    assert completed.mc_case_seed == (
+        derive_case_seed(
+            completed.inference_case_id
+        )
+    )
+
+    assert completed.mc_case_seed != (
+        derive_case_seed(
+            case_id
+        )
+    )
+
     assert (
         completed.action
         == "ABSTAIN_BASELINE"
@@ -288,6 +315,31 @@ def test_execute_live_run_persists_result_artifacts(
             run_root
             / relative
         ).is_file()
+
+    result_payload = json.loads(
+        (
+            run_root
+            / completed.artifacts[
+                "result_json"
+            ]
+        ).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert (
+        result_payload[
+            "inference_case_id"
+        ]
+        == completed.inference_case_id
+    )
+
+    assert (
+        result_payload[
+            "case_seed"
+        ]
+        == completed.mc_case_seed
+    )
 
     final_nifti = nib.load(
         run_root
@@ -369,4 +421,71 @@ def test_execute_live_run_records_failure(
     assert (
         failed.error.code
         == "RuntimeError"
+    )
+
+
+def test_live_inference_identity_is_content_deterministic() -> None:
+    raw = torch.arange(
+        4 * 3 * 4 * 5,
+        dtype=torch.float32,
+    ).reshape(
+        4,
+        3,
+        4,
+        5,
+    )
+
+    affine = np.eye(
+        4,
+        dtype=np.float64,
+    )
+
+    first = (
+        execution._derive_inference_case_id(
+            raw,
+            affine,
+        )
+    )
+
+    replay = (
+        execution._derive_inference_case_id(
+            raw.clone(),
+            affine.copy(),
+        )
+    )
+
+    assert first == replay
+    assert first.startswith(
+        "live_sha256_"
+    )
+
+    changed_voxel = raw.clone()
+
+    changed_voxel[
+        0,
+        0,
+        0,
+        0,
+    ] += 1.0
+
+    assert (
+        execution._derive_inference_case_id(
+            changed_voxel,
+            affine,
+        )
+        != first
+    )
+
+    changed_affine = affine.copy()
+    changed_affine[
+        0,
+        3,
+    ] = 1.0
+
+    assert (
+        execution._derive_inference_case_id(
+            raw,
+            changed_affine,
+        )
+        != first
     )

@@ -479,3 +479,24 @@ M11A is complete when:
 
 After M11A, M11B implements the backend foundation and progressively
 connects it to the existing research core.
+
+## Live inference identity and frozen MC-Dropout seeding
+
+The M11 application storage identifier (`case_<uuid>`) is not used as the
+scientific case identifier passed to the frozen MC-Dropout implementation.
+A random upload UUID would otherwise cause identical MRI re-uploads to receive
+different frozen per-case MC seeds.
+
+For live inference, M11 derives a deterministic identifier of the form
+`live_sha256_<digest>` from the canonical raw four-modality `[4,D,H,W]`
+float32 MRI tensor plus the reference 4x4 affine. The hash contract is
+versioned (`NeuroPrompt3D|M11|live-content-id|v1`) and canonicalizes numeric
+bytes to little-endian float32 MRI values and little-endian float64 affine
+values.
+
+This application-layer identifier is passed unchanged to the frozen
+case-specific seed function. The frozen MC master seed, T=10 execution,
+seed-derivation algorithm, and uncertainty computation are not modified.
+Identical canonical MRI data and geometry therefore reproduce the same
+live-inference MC seed even when uploaded under different application case
+UUIDs.

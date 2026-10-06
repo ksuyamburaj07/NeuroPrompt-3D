@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
-from types import SimpleNamespace
 
 import nibabel as nib
 import numpy as np
@@ -36,6 +36,98 @@ from src.pipeline.policy import (
     FROZEN_VARIANCE_THRESHOLD,
 )
 from src.sam.loader import load_sam_checkpoint
+
+
+def _derive_inference_case_id(
+    raw_mri_czyx,
+    affine: np.ndarray,
+) -> str:
+    """Derive stable live-case identity from canonical MRI content/geometry.
+
+    The random application case UUID is deliberately not used for the
+    frozen MC-Dropout seed. Identical canonical MRI data and geometry
+    therefore produce the same frozen per-case seed across re-uploads.
+    """
+
+    raw = (
+        raw_mri_czyx
+        .detach()
+        .to(device="cpu")
+        .contiguous()
+        .numpy()
+    )
+
+    if (
+        raw.ndim != 4
+        or int(raw.shape[0]) != 4
+    ):
+        raise ValueError(
+            "Live inference identity requires MRI shape [4,D,H,W]."
+        )
+
+    if not np.isfinite(raw).all():
+        raise ValueError(
+            "Live inference identity requires finite MRI values."
+        )
+
+    affine_array = np.asarray(
+        affine,
+        dtype=np.float64,
+    )
+
+    if (
+        affine_array.shape != (4, 4)
+        or not np.isfinite(
+            affine_array
+        ).all()
+    ):
+        raise ValueError(
+            "Live inference identity requires a finite 4x4 affine."
+        )
+
+    canonical_mri = np.ascontiguousarray(
+        raw,
+        dtype=np.dtype("<f4"),
+    )
+
+    canonical_affine = np.ascontiguousarray(
+        affine_array,
+        dtype=np.dtype("<f8"),
+    )
+
+    canonical_shape = np.asarray(
+        canonical_mri.shape,
+        dtype=np.dtype("<i8"),
+    )
+
+    digest = hashlib.sha256()
+
+    digest.update(
+        b"NeuroPrompt3D|M11|live-content-id|v1\0"
+    )
+
+    digest.update(
+        memoryview(
+            canonical_shape
+        ).cast("B")
+    )
+
+    digest.update(
+        memoryview(
+            canonical_affine
+        ).cast("B")
+    )
+
+    digest.update(
+        memoryview(
+            canonical_mri
+        ).cast("B")
+    )
+
+    return (
+        "live_sha256_"
+        + digest.hexdigest()
+    )
 
 
 def _resolve_nifti(
@@ -122,6 +214,7 @@ def _save_result_artifacts(
     *,
     run_id: str,
     case_id: str,
+    inference_case_id: str,
     result,
     reference_path: Path,
     baseline_bundle,
@@ -226,6 +319,7 @@ def _save_result_artifacts(
     result_payload = {
         "run_id": run_id,
         "case_id": case_id,
+        "inference_case_id": inference_case_id,
         "action": result.action,
         "gate_state": result.gate_state,
         "semantic_abstention_condition": (
@@ -361,6 +455,13 @@ def execute_live_run(
             modality_paths["t1n"]
         )
 
+        inference_case_id = (
+            _derive_inference_case_id(
+                raw_mri,
+                reference.affine,
+            )
+        )
+
         spacing_xyz = tuple(
             float(value)
             for value
@@ -384,6 +485,9 @@ def execute_live_run(
             progress=0.15,
             execution_device=str(
                 device
+            ),
+            inference_case_id=(
+                inference_case_id
             ),
         )
 
@@ -425,7 +529,7 @@ def execute_live_run(
                     baseline_bundle.config
                 ),
                 raw_mri_czyx=raw_mri,
-                case_id=run.case_id,
+                case_id=inference_case_id,
                 spacing_zyx_mm=(
                     spacing_zyx
                 ),
@@ -453,6 +557,9 @@ def execute_live_run(
             _save_result_artifacts(
                 run_id=run_id,
                 case_id=run.case_id,
+                inference_case_id=(
+                    inference_case_id
+                ),
                 result=result,
                 reference_path=(
                     modality_paths["t1n"]
@@ -474,6 +581,12 @@ def execute_live_run(
             progress=1.0,
             execution_device=str(
                 device
+            ),
+            inference_case_id=(
+                inference_case_id
+            ),
+            mc_case_seed=int(
+                result.case_seed
             ),
             action=result.action,
             gate_state=result.gate_state,
