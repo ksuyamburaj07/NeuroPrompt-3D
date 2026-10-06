@@ -143,6 +143,12 @@ def test_create_and_get_queued_run(
     assert payload["sam_used"] is None
     assert payload["error"] is None
 
+    assert payload[
+        "available_artifacts"
+    ] == []
+
+    assert "artifacts" not in payload
+
     run_id = payload["run_id"]
 
     run_root = (

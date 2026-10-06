@@ -500,3 +500,25 @@ seed-derivation algorithm, and uncertainty computation are not modified.
 Identical canonical MRI data and geometry therefore reproduce the same
 live-inference MC seed even when uploaded under different application case
 UUIDs.
+
+## Live artifact delivery boundary
+
+Live-run persistence may retain internal runtime-relative artifact paths, but
+those paths are not part of the public API contract.
+
+Public run responses expose only logical artifact names through
+`available_artifacts`.
+
+Artifact bytes are retrieved through:
+
+`GET /api/v1/runs/{run_id}/artifacts/{artifact_name}`
+
+The artifact endpoint accepts only application-approved logical names. It
+loads the trusted run record, requires a completed run, verifies that the
+persisted relative path exactly matches the application's expected artifact
+path, rejects absolute paths and symbolic links, verifies containment within
+that run's `artifacts/` directory, and requires the target to be a regular
+file.
+
+The frontend must never construct, receive, or submit arbitrary server
+filesystem paths for live result retrieval.

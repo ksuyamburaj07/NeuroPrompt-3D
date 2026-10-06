@@ -75,3 +75,70 @@ class RunRecord(BaseModel):
     )
 
     error: RunError | None = None
+
+
+class RunView(BaseModel):
+    """Public live-run representation without internal artifact paths."""
+
+    run_id: str
+    case_id: str
+
+    status: RunStatus
+    stage: RunStage
+
+    progress: float = Field(
+        ge=0.0,
+        le=1.0,
+    )
+
+    created_at: datetime
+    updated_at: datetime
+
+    frozen_variance_threshold: float
+
+    execution_device: str | None = None
+    worker_pid: int | None = None
+
+    inference_case_id: str | None = None
+    mc_case_seed: int | None = None
+
+    action: str | None = None
+    gate_state: str | None = None
+
+    hotspot_zyx: list[int] | None = None
+    hotspot_variance: float | None = None
+
+    fp_prompt_zyx: list[int] | None = None
+    fp_prompt_model_xyz: list[int] | None = None
+
+    sam_used: bool | None = None
+    sam_refinement_skipped: bool | None = None
+
+    semantic_abstention_condition: str | None = None
+
+    available_artifacts: list[str] = Field(
+        default_factory=list
+    )
+
+    error: RunError | None = None
+
+    @classmethod
+    def from_record(
+        cls,
+        record: RunRecord,
+    ) -> "RunView":
+        payload = record.model_dump(
+            exclude={
+                "artifacts",
+            }
+        )
+
+        payload[
+            "available_artifacts"
+        ] = sorted(
+            record.artifacts
+        )
+
+        return cls.model_validate(
+            payload
+        )
