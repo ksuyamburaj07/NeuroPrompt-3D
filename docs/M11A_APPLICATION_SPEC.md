@@ -55,6 +55,24 @@ Accepted medical-image format:
 - `.nii`
 - `.nii.gz`
 
+## 2.1.1 Application-to-Research-Core Modality Mapping
+
+The M11 UI/API uses current BraTS-style modality labels while the frozen
+research core preserves its historical channel names.
+
+The explicit application boundary is:
+
+| UI/API | Frozen research core |
+| --- | --- |
+| `t1n` | `T1` |
+| `t1c` | `T1ce` |
+| `t2w` | `T2` |
+| `t2f` | `FLAIR` |
+
+This mapping is an application adapter only.
+
+The research-core channel names and order are not renamed or modified.
+
 Optional input:
 
 - ground-truth segmentation for research evaluation
