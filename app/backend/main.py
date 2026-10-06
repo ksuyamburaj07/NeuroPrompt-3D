@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.backend.api.cases import router as cases_router
 from app.backend.api.health import router as health_router
+from app.backend.api.runs import router as runs_router
 from app.backend.core.constants import (
     API_PREFIX,
     APP_NAME,
@@ -47,6 +48,11 @@ def create_app() -> FastAPI:
 
     application.include_router(
         cases_router,
+        prefix=API_PREFIX,
+    )
+
+    application.include_router(
+        runs_router,
         prefix=API_PREFIX,
     )
 
