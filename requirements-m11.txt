@@ -5,3 +5,13 @@ fastapi
 uvicorn[standard]
 python-multipart
 httpx
+
+# Required by the frozen SAM-Med3D source.
+# Verified M11 CPU runtime:
+#   torch       2.14.0+cpu
+#   torchvision 0.29.0+cpu
+#
+# For the CPU environment install this package from the PyTorch CPU index:
+#   python -m pip install --no-deps torchvision==0.29.0 \
+#     --index-url https://download.pytorch.org/whl/cpu
+torchvision==0.29.0
