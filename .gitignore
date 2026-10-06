@@ -45,3 +45,7 @@ imports/**
 !imports/notebook_reconciliation/2026-09-30/
 !imports/notebook_reconciliation/2026-09-30/S3_NOTEBOOK_RECONCILIATION_MANIFEST_2026-09-30.json
 !imports/notebook_reconciliation/2026-09-30/S3_NOTEBOOK_RECONCILIATION_RECORD_2026-09-30.txt
+
+# M11 live application runtime
+app/backend/runtime/*
+!app/backend/runtime/.gitkeep

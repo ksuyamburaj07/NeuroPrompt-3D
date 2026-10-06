@@ -1,0 +1,7 @@
+# M11 application-layer dependencies.
+# Install into the separate M11 environment, not the frozen research env.
+
+fastapi
+uvicorn[standard]
+python-multipart
+httpx
