@@ -15,6 +15,7 @@ from app.research_ui.api_client import (
     ResearchApiError,
 )
 from app.research_ui.formatters import (
+    format_artifact_downloads,
     format_health,
     format_run,
     format_validation,
@@ -41,6 +42,42 @@ def _error_markdown(
     )
 
 
+def _artifact_downloads(
+    api: ResearchApiClient,
+    payload: dict[str, Any],
+) -> str:
+    run_id = payload.get(
+        "run_id"
+    )
+
+    artifacts = payload.get(
+        "available_artifacts"
+    )
+
+    if (
+        not isinstance(run_id, str)
+        or not isinstance(artifacts, list)
+    ):
+        return format_artifact_downloads(
+            payload,
+            {},
+        )
+
+    urls = {
+        name: api.artifact_url(
+            run_id,
+            name,
+        )
+        for name in artifacts
+        if isinstance(name, str)
+    }
+
+    return format_artifact_downloads(
+        payload,
+        urls,
+    )
+
+
 def inspect_existing_run(
     api: ResearchApiClient,
     run_id: str,
@@ -48,6 +85,7 @@ def inspect_existing_run(
     str,
     dict[str, Any] | None,
     dict[str, Any] | None,
+    str,
 ]:
     """Load one existing live run through the public HTTP API."""
 
@@ -61,6 +99,7 @@ def inspect_existing_run(
             ),
             None,
             None,
+            "### Artifact downloads\n\nNo run is currently selected.",
         )
 
     try:
@@ -79,6 +118,7 @@ def inspect_existing_run(
             ),
             None,
             None,
+            "### Artifact downloads\n\nNo artifacts are available.",
         )
 
     result_payload = None
@@ -121,6 +161,10 @@ def inspect_existing_run(
         + result_warning,
         run_payload,
         result_payload,
+        _artifact_downloads(
+            api,
+            run_payload,
+        ),
     )
 
 
@@ -530,6 +574,11 @@ pipeline. It does not represent the frozen M9E final-test explorer.
                 label="Existing result JSON",
             )
 
+        existing_artifact_downloads = gr.Markdown(
+            "### Artifact downloads\n\n"
+            "No existing run has been loaded."
+        )
+
         gr.Markdown(
             "## MRI inputs"
         )
@@ -666,6 +715,7 @@ pipeline. It does not represent the frozen M9E final-test explorer.
                 existing_run_summary,
                 existing_run_json,
                 existing_result_json,
+                existing_artifact_downloads,
             ],
         )
 

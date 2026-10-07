@@ -269,3 +269,44 @@ def test_research_api_client_surfaces_backend_detail() -> None:
         exc.value.status_code
         == 409
     )
+
+
+def test_artifact_url_uses_public_api_route() -> None:
+    client = ResearchApiClient()
+
+    url = client.artifact_url(
+        "run_11111111111111111111111111111111",
+        "final_mask_nifti",
+    )
+
+    assert url == (
+        "http://127.0.0.1:8000/api/v1/"
+        "runs/run_11111111111111111111111111111111/"
+        "artifacts/final_mask_nifti"
+    )
+
+    client.close()
+
+
+def test_artifact_url_rejects_empty_values() -> None:
+    client = ResearchApiClient()
+
+    with pytest.raises(
+        ValueError,
+        match="Run identifier",
+    ):
+        client.artifact_url(
+            "",
+            "result_json",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="Artifact name",
+    ):
+        client.artifact_url(
+            "run_11111111111111111111111111111111",
+            "",
+        )
+
+    client.close()

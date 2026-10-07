@@ -5,6 +5,7 @@ from __future__ import annotations
 from contextlib import ExitStack
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -335,4 +336,30 @@ class ResearchApiClient:
                 f"runs/{run_id}/"
                 "artifacts/result_json"
             ),
+        )
+
+    def artifact_url(
+        self,
+        run_id: str,
+        artifact_name: str,
+    ) -> str:
+        """Return the public API URL for one logical live artifact."""
+
+        run_id = run_id.strip()
+        artifact_name = artifact_name.strip()
+
+        if not run_id:
+            raise ValueError(
+                "Run identifier is required."
+            )
+
+        if not artifact_name:
+            raise ValueError(
+                "Artifact name is required."
+            )
+
+        return (
+            f"{self.base_url}/runs/"
+            f"{quote(run_id, safe='')}/artifacts/"
+            f"{quote(artifact_name, safe='')}"
         )

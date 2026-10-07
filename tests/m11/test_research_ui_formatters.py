@@ -181,3 +181,51 @@ def test_build_demo_returns_gradio_blocks() -> None:
     )
 
     client.close()
+
+
+def test_format_artifact_downloads_completed_run() -> None:
+    from app.research_ui.formatters import (
+        format_artifact_downloads,
+    )
+
+    rendered = format_artifact_downloads(
+        {
+            "status": "complete",
+            "available_artifacts": [
+                "final_mask_nifti",
+                "result_json",
+            ],
+        },
+        {
+            "final_mask_nifti": (
+                "http://127.0.0.1:8000/final"
+            ),
+            "result_json": (
+                "http://127.0.0.1:8000/result"
+            ),
+        },
+    )
+
+    assert "Artifact downloads" in rendered
+    assert "final_mask_nifti" in rendered
+    assert "http://127.0.0.1:8000/final" in rendered
+    assert "result_json" in rendered
+
+
+def test_format_artifact_downloads_running_run() -> None:
+    from app.research_ui.formatters import (
+        format_artifact_downloads,
+    )
+
+    rendered = format_artifact_downloads(
+        {
+            "status": "running",
+            "available_artifacts": [],
+        },
+        {},
+    )
+
+    assert (
+        "after the live inference run completes"
+        in rendered
+    )

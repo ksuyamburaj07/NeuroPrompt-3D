@@ -376,3 +376,67 @@ def format_run(
     return "\n".join(
         lines
     )
+
+
+def format_artifact_downloads(
+    payload: dict[str, Any],
+    artifact_urls: dict[str, str],
+) -> str:
+    """Render approved live artifacts as public API download links."""
+
+    status = payload.get(
+        "status"
+    )
+
+    if status != "complete":
+        return (
+            "### Artifact downloads\n\n"
+            "Artifacts become available after "
+            "the live inference run completes."
+        )
+
+    artifacts = payload.get(
+        "available_artifacts"
+    )
+
+    if not isinstance(
+        artifacts,
+        list,
+    ) or not artifacts:
+        return (
+            "### Artifact downloads\n\n"
+            "No approved artifacts are available "
+            "for this completed run."
+        )
+
+    lines = [
+        "### Artifact downloads",
+        "",
+        (
+            "Downloads are served through the "
+            "approved FastAPI artifact endpoint."
+        ),
+        "",
+    ]
+
+    for name in artifacts:
+        if not isinstance(
+            name,
+            str,
+        ):
+            continue
+
+        url = artifact_urls.get(
+            name
+        )
+
+        if url is None:
+            continue
+
+        lines.append(
+            f"- [{name}]({url})"
+        )
+
+    return "\n".join(
+        lines
+    )

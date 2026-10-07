@@ -73,7 +73,7 @@ def test_inspector_loads_completed_run_and_result() -> None:
         )
     )
 
-    summary, run_payload, result_payload = (
+    summary, run_payload, result_payload, downloads = (
         inspect_existing_run(
             client,
             RUN_ID,
@@ -93,6 +93,12 @@ def test_inspector_loads_completed_run_and_result() -> None:
         "action": "APPLY_LOCAL_FP",
         "sam_used": True,
     }
+
+    assert "result_json" in downloads
+    assert (
+        f"/runs/{RUN_ID}/artifacts/result_json"
+        in downloads
+    )
 
     assert seen == [
         (
@@ -144,7 +150,7 @@ def test_inspector_does_not_request_result_for_running_run() -> None:
         )
     )
 
-    summary, run_payload, result_payload = (
+    summary, run_payload, result_payload, downloads = (
         inspect_existing_run(
             client,
             RUN_ID,
@@ -176,7 +182,7 @@ def test_inspector_rejects_empty_run_id_without_http() -> None:
         )
     )
 
-    summary, run_payload, result_payload = (
+    summary, run_payload, result_payload, downloads = (
         inspect_existing_run(
             client,
             "   ",
@@ -213,7 +219,7 @@ def test_inspector_surfaces_unknown_run_safely() -> None:
         )
     )
 
-    summary, run_payload, result_payload = (
+    summary, run_payload, result_payload, downloads = (
         inspect_existing_run(
             client,
             RUN_ID,
