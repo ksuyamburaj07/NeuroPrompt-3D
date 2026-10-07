@@ -41,6 +41,89 @@ def _error_markdown(
     )
 
 
+def inspect_existing_run(
+    api: ResearchApiClient,
+    run_id: str,
+) -> tuple[
+    str,
+    dict[str, Any] | None,
+    dict[str, Any] | None,
+]:
+    """Load one existing live run through the public HTTP API."""
+
+    candidate = run_id.strip()
+
+    if not candidate:
+        return (
+            (
+                "### Existing run inspection blocked\n\n"
+                "**Error:** Enter a live run ID first."
+            ),
+            None,
+            None,
+        )
+
+    try:
+        run_payload = api.get_run(
+            candidate
+        )
+
+    except (
+        ResearchApiError,
+        ValueError,
+    ) as exc:
+        return (
+            _error_markdown(
+                "Existing run inspection failed",
+                exc,
+            ),
+            None,
+            None,
+        )
+
+    result_payload = None
+    result_warning = ""
+
+    artifacts = run_payload.get(
+        "available_artifacts"
+    )
+
+    if not isinstance(
+        artifacts,
+        list,
+    ):
+        artifacts = []
+
+    if (
+        run_payload.get("status")
+        == "complete"
+        and "result_json"
+        in artifacts
+    ):
+        try:
+            result_payload = (
+                api.get_result_json(
+                    candidate
+                )
+            )
+
+        except ResearchApiError as exc:
+            result_warning = (
+                "\n\n---\n\n"
+                "**Result artifact warning:** "
+                + str(exc)
+            )
+
+    return (
+        format_run(
+            run_payload
+        )
+        + result_warning,
+        run_payload,
+        result_payload,
+    )
+
+
 def build_demo(
     client: ResearchApiClient | None = None,
 ) -> gr.Blocks:
@@ -407,6 +490,47 @@ pipeline. It does not represent the frozen M9E final-test explorer.
             )
 
         gr.Markdown(
+            "## Existing Run Inspector"
+        )
+
+        gr.Markdown(
+            (
+                "Inspect an existing **live M11 inference run** "
+                "through the public FastAPI contract. "
+                "This does not rerun inference."
+            )
+        )
+
+        existing_run_id = gr.Textbox(
+            label="Existing live run ID",
+            placeholder="run_<32 hex characters>",
+        )
+
+        inspect_run_button = gr.Button(
+            "Load Existing Run"
+        )
+
+        existing_run_summary = gr.Markdown(
+            "No existing run has been loaded."
+        )
+
+        with gr.Accordion(
+            "Existing run payload",
+            open=False,
+        ):
+            existing_run_json = gr.JSON(
+                label="Existing run JSON",
+            )
+
+        with gr.Accordion(
+            "Existing result.json",
+            open=False,
+        ):
+            existing_result_json = gr.JSON(
+                label="Existing result JSON",
+            )
+
+        gr.Markdown(
             "## MRI inputs"
         )
 
@@ -527,6 +651,21 @@ pipeline. It does not represent the frozen M9E final-test explorer.
             outputs=[
                 backend_status,
                 backend_json,
+            ],
+        )
+
+        inspect_run_button.click(
+            fn=lambda run_id: inspect_existing_run(
+                api,
+                run_id,
+            ),
+            inputs=[
+                existing_run_id,
+            ],
+            outputs=[
+                existing_run_summary,
+                existing_run_json,
+                existing_result_json,
             ],
         )
 

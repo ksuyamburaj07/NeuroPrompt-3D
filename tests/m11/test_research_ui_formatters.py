@@ -149,4 +149,35 @@ def test_build_demo_returns_gradio_blocks() -> None:
         gr.Blocks,
     )
 
+    config = demo.get_config_file()
+
+    labels = {
+        component.get(
+            "props",
+            {},
+        ).get(
+            "label"
+        )
+        for component
+        in config.get(
+            "components",
+            [],
+        )
+    }
+
+    assert (
+        "Existing live run ID"
+        in labels
+    )
+
+    assert (
+        "Existing run JSON"
+        in labels
+    )
+
+    assert (
+        "Existing result JSON"
+        in labels
+    )
+
     client.close()
