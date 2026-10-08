@@ -108,8 +108,10 @@ def _write_run(
     )
 
 
-def create_live_run(
+def _create_live_run_unkeyed(
     case_id: str,
+    *,
+    explicit_run_id: str | None = None,
 ) -> RunRecord:
     """Create a queued run for an already validated live case."""
 
@@ -124,9 +126,7 @@ def create_live_run(
 
     paths.ensure_runtime_directories()
 
-    run_id = (
-        f"run_{uuid4().hex}"
-    )
+    run_id = explicit_run_id or f"run_{uuid4().hex}"
 
     now = _utc_now()
 
@@ -159,6 +159,66 @@ def create_live_run(
     )
 
     return record
+
+
+
+def create_live_run(
+    case_id: str,
+    *,
+    idempotency_key: str | None = None,
+) -> RunRecord:
+    """Create a run, replaying the same identity for the same key."""
+
+    if idempotency_key is None:
+        return _create_live_run_unkeyed(case_id)
+
+    import fcntl
+    from uuid import UUID, NAMESPACE_URL, uuid5
+
+    try:
+        parsed_key = UUID(idempotency_key)
+    except (TypeError, AttributeError, ValueError) as exc:
+        raise ValueError(
+            "Idempotency-Key must be a canonical UUID v4."
+        ) from exc
+
+    if (
+        parsed_key.version != 4
+        or str(parsed_key) != idempotency_key.lower()
+    ):
+        raise ValueError(
+            "Idempotency-Key must be a canonical UUID v4."
+        )
+
+    run_id = "run_" + uuid5(
+        NAMESPACE_URL,
+        f"neuroprompt3d/live-run/v1/{case_id}/{parsed_key}",
+    ).hex
+
+    paths.ensure_runtime_directories()
+
+    lock_path = paths.LIVE_RUNS_ROOT / ".create_run.lock"
+
+    with lock_path.open("a+b") as lock_stream:
+        fcntl.flock(lock_stream.fileno(), fcntl.LOCK_EX)
+
+        try:
+            try:
+                existing = load_live_run(run_id)
+            except FileNotFoundError:
+                return _create_live_run_unkeyed(
+                    case_id,
+                    explicit_run_id=run_id,
+                )
+
+            if existing.case_id != case_id:
+                raise ValueError(
+                    "Idempotency key resolved to a different case."
+                )
+
+            return existing
+        finally:
+            fcntl.flock(lock_stream.fileno(), fcntl.LOCK_UN)
 
 
 def load_live_run(

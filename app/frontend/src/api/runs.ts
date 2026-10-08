@@ -89,11 +89,12 @@ function isRunView(value: unknown): value is RunView {
 async function requestRun(
   path: string,
   method: 'GET' | 'POST',
+  headers?: Record<string, string>,
 ): Promise<RunView> {
   let response: Response
 
   try {
-    response = await fetch(`${API_BASE}/${path}`, { method })
+    response = await fetch(`${API_BASE}/${path}`, { method, headers })
   } catch {
     throw new Error(
       'Cannot reach FastAPI. The connection may have been interrupted.',
@@ -121,10 +122,16 @@ async function requestRun(
   return payload
 }
 
-export function createRun(caseId: string): Promise<RunView> {
+export function createRun(
+  caseId: string,
+  idempotencyKey?: string,
+): Promise<RunView> {
   return requestRun(
     `cases/${encodeURIComponent(caseId)}/runs`,
     'POST',
+    idempotencyKey
+      ? { 'Idempotency-Key': idempotencyKey }
+      : undefined,
   )
 }
 

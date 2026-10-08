@@ -1,9 +1,11 @@
 import { useState, type ChangeEvent, type DragEvent } from 'react'
 import './PreparePage.css'
 import { ProcessPage } from './ProcessPage'
-import { getRun } from '../api/runs'
+import { createRun, getRun } from '../api/runs'
 import {
   clearRunRecovery,
+  clearPendingRunCreation,
+  readPendingRunCreation,
   readRunRecovery,
   saveRunRecovery,
   type SavedRunReference,
@@ -170,6 +172,47 @@ export function PreparePage() {
       )
     } finally {
       setIsDiscarding(false)
+    }
+  }
+
+  async function recoverPendingCreation() {
+    const pending = readPendingRunCreation()
+
+    if (!pending || isRecovering || ready) return
+
+    setIsRecovering(true)
+    setRecoveryError(null)
+
+    try {
+      // Same request key; no worker execution.
+      const recovered = await createRun(
+        pending.caseId,
+        pending.idempotencyKey,
+      )
+
+      if (recovered.case_id !== pending.caseId) {
+        throw new Error('Recovered run belongs to another case.')
+      }
+
+      const reference = {
+        runId: recovered.run_id,
+        caseId: recovered.case_id,
+      }
+
+      saveRunRecovery(reference)
+      clearPendingRunCreation()
+
+      setSavedRun(reference)
+      setExistingRunId(recovered.run_id)
+      setProcessCaseId(recovered.case_id)
+    } catch (cause) {
+      setRecoveryError(
+        cause instanceof Error
+          ? cause.message
+          : 'Unable to recover creation request.',
+      )
+    } finally {
+      setIsRecovering(false)
     }
   }
 
@@ -544,6 +587,20 @@ export function PreparePage() {
           </div>
 
           <div className="prepare__recovery-controls">
+            {readPendingRunCreation() && (
+              <div className="prepare__saved-run">
+                <button
+                  type="button"
+                  disabled={isRecovering}
+                  onClick={() => void recoverPendingCreation()}
+                >
+                  Recover unconfirmed creation ↻
+                </button>
+                <span>
+                  Reuses the original key. No worker execution.
+                </span>
+              </div>
+            )}
             {savedRun && (
               <div className="prepare__saved-run">
                 <button

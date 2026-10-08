@@ -352,3 +352,192 @@ def test_delete_case_after_completed_run_keeps_run(
         run_response.json()["status"]
         == "complete"
     )
+
+
+def test_concurrent_launch_requests_start_exactly_one_worker(
+    tmp_path: Path,
+    isolated_runtime: tuple[Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two simultaneous requests cannot spawn two workers."""
+
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event, Lock
+    from time import sleep
+
+    from app.backend.services import worker_service
+
+    case_id = _create_case(tmp_path)
+
+    response = client.post(
+        f"/api/v1/cases/{case_id}/runs"
+    )
+    assert response.status_code == 201
+
+    run_id = response.json()["run_id"]
+
+    first_claim_reached = Event()
+    release_first_claim = Event()
+    counter_lock = Lock()
+    spawned = [0]
+
+    original_update = worker_service.update_live_run
+
+    def delayed_update(*args, **kwargs):
+        if kwargs.get("status") == "running":
+            first_claim_reached.set()
+
+            if not release_first_claim.wait(timeout=5):
+                raise RuntimeError(
+                    "Timed out waiting to release test claim"
+                )
+
+        return original_update(*args, **kwargs)
+
+    def fake_popen(*args, **kwargs):
+        with counter_lock:
+            spawned[0] += 1
+        return object()
+
+    monkeypatch.setattr(
+        worker_service,
+        "update_live_run",
+        delayed_update,
+    )
+
+    monkeypatch.setattr(
+        worker_service.subprocess,
+        "Popen",
+        fake_popen,
+    )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(
+            worker_service.launch_run_worker,
+            run_id,
+        )
+
+        assert first_claim_reached.wait(timeout=5)
+
+        second = pool.submit(
+            worker_service.launch_run_worker,
+            run_id,
+        )
+
+        try:
+            sleep(0.1)
+        finally:
+            release_first_claim.set()
+
+        first_result = first.result(timeout=5)
+
+        with pytest.raises(
+            worker_service.RunLaunchConflict
+        ):
+            second.result(timeout=5)
+
+    assert first_result.run_id == run_id
+    assert first_result.status == "running"
+    assert spawned[0] == 1
+
+    persisted = worker_service.load_live_run(
+        run_id
+    )
+    assert persisted.status == "running"
+
+
+def test_idempotency_key_replays_same_run(
+    tmp_path: Path,
+    isolated_runtime: tuple[Path, Path],
+) -> None:
+    from uuid import uuid4
+
+    case_id = _create_case(tmp_path)
+    endpoint = f"/api/v1/cases/{case_id}/runs"
+    headers = {"Idempotency-Key": str(uuid4())}
+
+    first = client.post(endpoint, headers=headers)
+    second = client.post(endpoint, headers=headers)
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert first.json()["run_id"] == second.json()["run_id"]
+    assert second.json()["status"] == "queued"
+
+
+def test_distinct_idempotency_keys_create_distinct_runs(
+    tmp_path: Path,
+    isolated_runtime: tuple[Path, Path],
+) -> None:
+    from uuid import uuid4
+
+    case_id = _create_case(tmp_path)
+    endpoint = f"/api/v1/cases/{case_id}/runs"
+
+    first = client.post(
+        endpoint,
+        headers={"Idempotency-Key": str(uuid4())},
+    )
+    second = client.post(
+        endpoint,
+        headers={"Idempotency-Key": str(uuid4())},
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert first.json()["run_id"] != second.json()["run_id"]
+
+
+def test_invalid_idempotency_key_is_rejected(
+    tmp_path: Path,
+    isolated_runtime: tuple[Path, Path],
+) -> None:
+    case_id = _create_case(tmp_path)
+
+    response = client.post(
+        f"/api/v1/cases/{case_id}/runs",
+        headers={"Idempotency-Key": "not-a-uuid"},
+    )
+
+    assert response.status_code == 400
+
+
+def test_legacy_run_creation_without_key_remains_supported(
+    tmp_path: Path,
+    isolated_runtime: tuple[Path, Path],
+) -> None:
+    case_id = _create_case(tmp_path)
+    endpoint = f"/api/v1/cases/{case_id}/runs"
+
+    first = client.post(endpoint)
+    second = client.post(endpoint)
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert first.json()["run_id"] != second.json()["run_id"]
+
+
+def test_parallel_idempotent_creation_reuses_one_run(
+    tmp_path: Path,
+    isolated_runtime: tuple[Path, Path],
+) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+    from uuid import uuid4
+    from app.backend.services.run_service import create_live_run
+
+    case_id = _create_case(tmp_path)
+    key = str(uuid4())
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [
+            pool.submit(
+                create_live_run,
+                case_id,
+                idempotency_key=key,
+            )
+            for _ in range(4)
+        ]
+        results = [future.result(timeout=10) for future in futures]
+
+    assert len({record.run_id for record in results}) == 1
+    assert all(record.status == "queued" for record in results)

@@ -1,5 +1,6 @@
 from fastapi import (
     APIRouter,
+    Header,
     HTTPException,
     status,
 )
@@ -36,11 +37,16 @@ router = APIRouter(
 )
 def create_run(
     case_id: str,
+    idempotency_key: str | None = Header(
+        default=None,
+        alias="Idempotency-Key",
+    ),
 ) -> RunView:
     try:
         return RunView.from_record(
             create_live_run(
-                case_id
+                case_id,
+                idempotency_key=idempotency_key,
             )
         )
 

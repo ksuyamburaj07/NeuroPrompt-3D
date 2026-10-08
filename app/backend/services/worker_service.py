@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fcntl
 import subprocess
 import sys
 
@@ -20,30 +21,57 @@ class RunLaunchConflict(RuntimeError):
 def launch_run_worker(
     run_id: str,
 ) -> RunRecord:
-    run = load_live_run(
+    # Validate the run identity and existence first.
+    load_live_run(
         run_id
     )
-
-    if run.status != "queued":
-        raise RunLaunchConflict(
-            "Only queued runs can be started."
-        )
 
     run_root = (
         paths.LIVE_RUNS_ROOT
         / run_id
     )
 
+    # The Linux advisory lock serializes competing launch claims
+    # across threads and separate FastAPI worker processes.
+    lock_path = (
+        run_root
+        / ".worker_launch.lock"
+    )
+
+    with lock_path.open("a+b") as lock_stream:
+        fcntl.flock(
+            lock_stream.fileno(),
+            fcntl.LOCK_EX,
+        )
+
+        try:
+            # Re-read AFTER acquiring the lock.
+            run = load_live_run(
+                run_id
+            )
+
+            if run.status != "queued":
+                raise RunLaunchConflict(
+                    "Only queued runs can be started."
+                )
+
+            # Claim this run before spawning the worker.
+            update_live_run(
+                run_id,
+                status="running",
+                stage="validating",
+                progress=0.01,
+            )
+
+        finally:
+            fcntl.flock(
+                lock_stream.fileno(),
+                fcntl.LOCK_UN,
+            )
+
     log_path = (
         run_root
         / "worker.log"
-    )
-
-    update_live_run(
-        run_id,
-        status="running",
-        stage="validating",
-        progress=0.01,
     )
 
     try:

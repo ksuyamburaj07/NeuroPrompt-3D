@@ -405,3 +405,25 @@
     transition: none !important;
   }
 }
+
+/* M11D3B1 — read-only queued-run inspection */
+
+.process__refresh {
+  margin-top: 24px;
+  padding: 13px 18px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.process__refresh:hover {
+  border-color: var(--live);
+  color: var(--live);
+}
+
+.process__refresh:focus-visible {
+  outline: 2px solid var(--live);
+  outline-offset: 3px;
+}

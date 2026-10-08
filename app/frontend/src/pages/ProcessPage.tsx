@@ -8,7 +8,11 @@ import {
   type RunView,
 } from '../api/runs'
 import './ProcessPage.css'
-import { saveRunRecovery } from '../api/runRecovery'
+import {
+  clearPendingRunCreation,
+  getOrCreateRunCreationKey,
+  saveRunRecovery,
+} from '../api/runRecovery'
 
 type Props = {
   caseId: string
@@ -58,6 +62,7 @@ export function ProcessPage({
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [observedStages, setObservedStages] = useState<ObservedStage[]>([])
   const launchLock = useRef(false)
+  const creationKeyRef = useRef<string | null>(null)
 
   const runId = run?.run_id ?? existingRunId
   const terminal = run?.status === 'complete' || run?.status === 'failed'
@@ -75,7 +80,11 @@ export function ProcessPage({
   }
 
   async function startInference() {
-    if (launchLock.current || run !== null || phase !== 'idle') return
+    if (
+      launchLock.current ||
+      run !== null ||
+      (phase !== 'idle' && phase !== 'attention')
+    ) return
 
     launchLock.current = true
     setNotice(null)
@@ -85,9 +94,14 @@ export function ProcessPage({
     let created: RunView
 
     try {
-      created = await createRun(caseId)
+      const key = creationKeyRef.current ??
+        getOrCreateRunCreationKey(caseId)
 
-      // Persist the confirmed identity before requesting worker execution.
+      creationKeyRef.current = key
+
+      created = await createRun(caseId, key)
+
+      // Save confirmed identity before execution.
       saveRunRecovery({
         runId: created.run_id,
         caseId: created.case_id,
@@ -95,6 +109,8 @@ export function ProcessPage({
 
       onRunCreated(created.run_id)
       acceptRun(created)
+
+      clearPendingRunCreation()
     } catch (error) {
       setNotice(
         `Run creation could not be confirmed: ${messageFromError(error)} ` +
@@ -121,6 +137,41 @@ export function ProcessPage({
     launchLock.current = false
   }
 
+  async function refreshRunStatus() {
+    if (!runId || launchLock.current) return
+
+    setConnectionError(null)
+
+    try {
+      const latest = await getRun(runId)
+
+      if (latest.case_id !== caseId) {
+        throw new Error(
+          'The server returned a run associated with another case.',
+        )
+      }
+
+      acceptRun(latest)
+
+      if (latest.status === 'complete' || latest.status === 'failed') {
+        setNotice(null)
+        setPhase('settled')
+      } else if (latest.status === 'queued') {
+        setNotice(
+          'The existing run is still queued. No worker was launched.',
+        )
+        setPhase('attention')
+      } else {
+        setNotice(null)
+        setPhase('monitoring')
+      }
+    } catch (error) {
+      setConnectionError(
+        `Unable to inspect the existing run: ${messageFromError(error)}`,
+      )
+    }
+  }
+
   useEffect(() => {
     if (phase !== 'monitoring' || !runId) return
 
@@ -137,9 +188,21 @@ export function ProcessPage({
         setConnectionError(null)
 
         if (latest.status === 'complete' || latest.status === 'failed') {
+          setNotice(null)
           setPhase('settled')
           return
         }
+
+        if (latest.status === 'queued') {
+          setNotice(
+            'This existing run is queued. No worker will be started ' +
+            'automatically. Check its server status before taking action.',
+          )
+          setPhase('attention')
+          return
+        }
+
+        setNotice(null)
       } catch (error) {
         if (stopped) return
         setConnectionError(
@@ -251,6 +314,26 @@ export function ProcessPage({
                 onClick={startInference}
               >
                 Start scientific pipeline <span>→</span>
+              </button>
+            )}
+
+            {phase === 'attention' && !runId && (
+              <button
+                type="button"
+                className="process__refresh"
+                onClick={() => void startInference()}
+              >
+                Retry creation with same request key ↻
+              </button>
+            )}
+
+            {phase === 'attention' && runId && (
+              <button
+                type="button"
+                className="process__refresh"
+                onClick={() => void refreshRunStatus()}
+              >
+                Check existing run status ↻
               </button>
             )}
           </div>
