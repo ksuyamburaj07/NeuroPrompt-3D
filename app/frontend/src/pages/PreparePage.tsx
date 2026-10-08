@@ -1,5 +1,13 @@
 import { useState, type ChangeEvent, type DragEvent } from 'react'
 import './PreparePage.css'
+import { ProcessPage } from './ProcessPage'
+import { getRun } from '../api/runs'
+import {
+  clearRunRecovery,
+  readRunRecovery,
+  saveRunRecovery,
+  type SavedRunReference,
+} from '../api/runRecovery'
 import {
   deleteStagedCase,
   validateCase,
@@ -36,6 +44,14 @@ export function PreparePage() {
   const [validation, setValidation] = useState<CaseValidationResponse | null>(null)
   const [isValidating, setIsValidating] = useState(false)
   const [isDiscarding, setIsDiscarding] = useState(false)
+  const [processCaseId, setProcessCaseId] = useState<string | null>(null)
+  const [existingRunId, setExistingRunId] = useState<string | null>(null)
+  const [savedRun, setSavedRun] = useState<SavedRunReference | null>(
+    () => readRunRecovery(),
+  )
+  const [recoveryInput, setRecoveryInput] = useState('')
+  const [isRecovering, setIsRecovering] = useState(false)
+  const [recoveryError, setRecoveryError] = useState<string | null>(null)
 
   const selectedCount = modalities.filter(({ key }) => Boolean(files[key])).length
   const complete = selectedCount === modalities.length
@@ -145,6 +161,8 @@ export function PreparePage() {
       setFiles({})
       setGroundTruth(null)
       setValidation(null)
+      setProcessCaseId(null)
+      setExistingRunId(null)
       setError(null)
     } catch (cause) {
       setRequestError(
@@ -153,6 +171,61 @@ export function PreparePage() {
     } finally {
       setIsDiscarding(false)
     }
+  }
+
+  async function handleRecoverRun(candidate: string) {
+    if (isRecovering || ready) return
+
+    const requestedId = candidate.trim()
+
+    if (!requestedId) {
+      setRecoveryError('Enter an existing inference run ID.')
+      return
+    }
+
+    setIsRecovering(true)
+    setRecoveryError(null)
+
+    try {
+      // A GET request only: never create or execute a run on reconnect.
+      const recovered = await getRun(requestedId)
+
+      if (recovered.run_id !== requestedId) {
+        throw new Error('The backend returned a different run identity.')
+      }
+
+      const reference: SavedRunReference = {
+        runId: recovered.run_id,
+        caseId: recovered.case_id,
+      }
+
+      saveRunRecovery(reference)
+      setSavedRun(reference)
+      setExistingRunId(recovered.run_id)
+      setProcessCaseId(recovered.case_id)
+    } catch (cause) {
+      setRecoveryError(
+        cause instanceof Error
+          ? cause.message
+          : 'Unable to reconnect to the run.',
+      )
+    } finally {
+      setIsRecovering(false)
+    }
+  }
+
+  if (processCaseId) {
+    return (
+      <ProcessPage
+        caseId={processCaseId}
+        existingRunId={existingRunId}
+        onRunCreated={setExistingRunId}
+        onBack={() => {
+          setProcessCaseId(null)
+          setSavedRun(readRunRecovery())
+        }}
+      />
+    )
   }
 
   return (
@@ -351,13 +424,25 @@ export function PreparePage() {
             </div>
 
             {ready ? (
-              <button
-                type="button"
-                onClick={handleDiscard}
-                disabled={isDiscarding}
-              >
-                {isDiscarding ? 'Discarding...' : 'Discard staged case'}
-              </button>
+              <div className="prepare__validation-actions">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (validation?.case_id) {
+                      setProcessCaseId(validation.case_id)
+                    }
+                  }}
+                >
+                  Continue to Process →
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDiscard}
+                  disabled={isDiscarding}
+                >
+                  {isDiscarding ? 'Discarding...' : 'Discard staged case'}
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
@@ -446,6 +531,76 @@ export function PreparePage() {
           </div>
         </aside>
       </div>
+
+      {!ready && (
+        <section className="prepare__recovery" aria-label="Run recovery">
+          <div className="prepare__recovery-intro">
+            <span className="prepare__kicker">RECONNECT / EXISTING RUN</span>
+            <strong>Continue an existing inference session</strong>
+            <p>
+              Inspect a previously created run without uploading MRI files
+              again or starting another worker.
+            </p>
+          </div>
+
+          <div className="prepare__recovery-controls">
+            {savedRun && (
+              <div className="prepare__saved-run">
+                <button
+                  type="button"
+                  disabled={isRecovering}
+                  onClick={() => void handleRecoverRun(savedRun.runId)}
+                >
+                  Reconnect saved run →
+                </button>
+                <code>{savedRun.runId}</code>
+                <button
+                  type="button"
+                  disabled={isRecovering}
+                  onClick={() => {
+                    clearRunRecovery()
+                    setSavedRun(null)
+                    setExistingRunId(null)
+                  }}
+                >
+                  Clear browser shortcut
+                </button>
+              </div>
+            )}
+
+            <form
+              className="prepare__recovery-form"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void handleRecoverRun(recoveryInput)
+              }}
+            >
+              <input
+                type="text"
+                value={recoveryInput}
+                onChange={(event) => setRecoveryInput(event.target.value)}
+                placeholder="run_..."
+                aria-label="Existing inference run ID"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={isRecovering}
+              />
+              <button
+                type="submit"
+                disabled={isRecovering || !recoveryInput.trim()}
+              >
+                {isRecovering ? 'Connecting...' : 'Inspect existing run'}
+              </button>
+            </form>
+
+            {recoveryError && (
+              <p role="alert" className="prepare__error">
+                {recoveryError}
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       <footer className="prepare__timeline" aria-label="Case workflow">
         <div className="prepare__timeline-step is-current">
