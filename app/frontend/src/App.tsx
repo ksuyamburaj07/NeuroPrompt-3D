@@ -7,7 +7,7 @@ import {
 } from './components/AppHeader'
 import { ResearchDisclaimer } from './components/ResearchDisclaimer'
 import { FinalTestPage } from './pages/FinalTestPage'
-import { NewCasePage } from './pages/NewCasePage'
+import { PreparePage } from './pages/PreparePage'
 import { ResearchPage } from './pages/ResearchPage'
 
 function App() {
@@ -24,9 +24,9 @@ function App() {
       />
 
       <div className="app-content">
-        {activeMode === 'new-case' && (
-          <NewCasePage />
-        )}
+        <div hidden={activeMode !== 'new-case'}>
+          <PreparePage />
+        </div>
 
         {activeMode === 'final-test' && (
           <FinalTestPage />
