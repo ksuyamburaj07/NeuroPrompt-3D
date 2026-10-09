@@ -1,5 +1,5 @@
 import { MRIViewer } from './MRIViewer'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   artifactUrl,
   createRun,
@@ -20,6 +20,10 @@ type Props = {
   existingRunId: string | null
   onRunCreated: (runId: string) => void
   onBack: () => void
+}
+
+type InferencePanelProps = Props & {
+  onRunObserved: (run: RunView) => void
 }
 
 const stageLabels: Record<RunStage, string> = {
@@ -54,7 +58,8 @@ function InferencePanel({
   existingRunId,
   onRunCreated,
   onBack,
-}: Props) {
+  onRunObserved,
+}: InferencePanelProps) {
   const [run, setRun] = useState<RunView | null>(null)
   const [phase, setPhase] = useState<Phase>(
     existingRunId ? 'monitoring' : 'idle',
@@ -69,8 +74,9 @@ function InferencePanel({
   const terminal = run?.status === 'complete' || run?.status === 'failed'
   const percentage = run ? Math.round(run.progress * 100) : null
 
-  function acceptRun(next: RunView) {
+  const acceptRun = useCallback((next: RunView) => {
     setRun(next)
+    onRunObserved(next)
     setObservedStages((previous) => {
       if (previous.at(-1)?.stage === next.stage) return previous
       return [
@@ -78,7 +84,7 @@ function InferencePanel({
         { stage: next.stage, updatedAt: next.updated_at },
       ]
     })
-  }
+  }, [onRunObserved])
 
   async function startInference() {
     if (
@@ -222,7 +228,7 @@ function InferencePanel({
       stopped = true
       clearTimeout(timer)
     }
-  }, [phase, runId])
+  }, [phase, runId, acceptRun])
 
   const backDisabled =
     phase === 'creating' ||
@@ -466,10 +472,40 @@ function InferencePanel({
 
 // Imaging first; original inference controls remain unchanged.
 export function ProcessPage(props: Props) {
+  const [observedRun, setObservedRun] = useState<RunView | null>(null)
+
+  const completedRunId =
+    observedRun?.case_id === props.caseId &&
+    observedRun.status === 'complete'
+      ? observedRun.run_id
+      : null
+
+  const observeRun = useCallback((next: RunView) => {
+    if (next.case_id !== props.caseId) return
+
+    setObservedRun((previous) => {
+      if (
+        previous?.run_id === next.run_id &&
+        previous.status === next.status
+      ) {
+        return previous
+      }
+
+      return next
+    })
+  }, [props.caseId])
+
   return (
     <div className="mri-workspace">
-      <MRIViewer key={props.caseId} caseId={props.caseId} />
-      <InferencePanel {...props} />
+      <MRIViewer
+        key={props.caseId}
+        caseId={props.caseId}
+        completedRunId={completedRunId}
+      />
+      <InferencePanel
+        {...props}
+        onRunObserved={observeRun}
+      />
     </div>
   )
 }

@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react'
 import {
   getViewerMetadata,
   viewerSliceUrl,
+  viewerOverlayUrl,
   type MRIModality,
   type MRIPlane,
   type MRIViewerMetadata,
+  type MRIOverlayLayer,
 } from '../api/viewer'
 import './MRIViewer.css'
 
 type Props = {
   caseId: string
+  completedRunId: string | null
 }
 
 type SliceIndices = Record<MRIPlane, number>
@@ -38,6 +41,9 @@ function SlicePane({
   plane,
   metadata,
   indices,
+  completedRunId,
+  overlayLayer,
+  overlayOpacity,
   onIndexChange,
 }: {
   caseId: string
@@ -45,15 +51,26 @@ function SlicePane({
   plane: MRIPlane
   metadata: MRIViewerMetadata
   indices: SliceIndices
+  completedRunId: string | null
+  overlayLayer: MRIOverlayLayer | 'none'
+  overlayOpacity: number
   onIndexChange: (plane: MRIPlane, index: number) => void
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  const [failedOverlayUrl, setFailedOverlayUrl] = useState<string | null>(null)
 
   const info = metadata.planes[plane]
   const index = indices[plane]
   const [sizeX, sizeY, sizeZ] = metadata.shape_ras_xyz
 
   const url = viewerSliceUrl(caseId, modality, plane, index)
+
+  const overlayUrl =
+    completedRunId && overlayLayer !== 'none'
+      ? viewerOverlayUrl(
+          caseId, completedRunId, overlayLayer, plane, index,
+        )
+      : null
 
   const horizontal = plane === 'sagittal'
     ? percentage(indices.coronal, sizeY)
@@ -103,6 +120,31 @@ function SlicePane({
             />
           )}
 
+          {overlayUrl && failedUrl !== url && (
+            failedOverlayUrl === overlayUrl ? (
+              <div className="mri-viewer__overlay-error" role="status">
+                Overlay unavailable
+                <button
+                  type="button"
+                  onClick={() => setFailedOverlayUrl(null)}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <img
+                key={overlayUrl}
+                className="mri-viewer__overlay"
+                src={overlayUrl}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                style={{ opacity: overlayOpacity / 100 }}
+                onError={() => setFailedOverlayUrl(overlayUrl)}
+              />
+            )
+          )}
+
           <div
             className="mri-viewer__crosshair-horizontal"
             style={{ top: `${vertical}%` }}
@@ -142,10 +184,16 @@ function SlicePane({
   )
 }
 
-export function MRIViewer({ caseId }: Props) {
+export function MRIViewer({
+  caseId,
+  completedRunId,
+}: Props) {
   const [metadata, setMetadata] = useState<MRIViewerMetadata | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [modality, setModality] = useState<MRIModality>('t2f')
+  const [overlayLayer, setOverlayLayer] =
+    useState<MRIOverlayLayer | 'none'>('final')
+  const [overlayOpacity, setOverlayOpacity] = useState(45)
   const [indices, setIndices] = useState<SliceIndices>({
     axial: 0,
     coronal: 0,
@@ -217,6 +265,60 @@ export function MRIViewer({ caseId }: Props) {
         </div>
       </header>
 
+      {metadata && (
+        <div className="mri-viewer__overlay-controls">
+          <label htmlFor="mri-overlay-layer">
+            Segmentation
+            <select
+              id="mri-overlay-layer"
+              value={overlayLayer}
+              disabled={!completedRunId}
+              onChange={(event) => {
+                setOverlayLayer(
+                  event.target.value as MRIOverlayLayer | 'none',
+                )
+              }}
+            >
+              <option value="final">Final prediction</option>
+              <option value="baseline">Baseline prediction</option>
+              <option value="removed">Removed voxels</option>
+              <option value="none">MRI only</option>
+            </select>
+          </label>
+
+          <label htmlFor="mri-overlay-opacity">
+            Opacity: {overlayOpacity}%
+            <input
+              id="mri-overlay-opacity"
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={overlayOpacity}
+              disabled={!completedRunId || overlayLayer === 'none'}
+              onChange={(event) => {
+                setOverlayOpacity(Number(event.target.value))
+              }}
+            />
+          </label>
+
+          <span
+            className="mri-viewer__overlay-legend"
+            data-layer={overlayLayer}
+          >
+            {!completedRunId
+              ? 'Overlays require a completed inference run'
+              : overlayLayer === 'none'
+                ? 'MRI only'
+                : overlayLayer === 'removed'
+                  ? 'Removed predicted voxels — not verified errors'
+                  : overlayLayer === 'baseline'
+                    ? 'Original model prediction'
+                    : 'Final refined prediction'}
+          </span>
+        </div>
+      )}
+
       {loadError ? (
         <div className="mri-viewer__message" role="alert">
           {loadError}
@@ -250,6 +352,9 @@ export function MRIViewer({ caseId }: Props) {
                 plane={plane}
                 metadata={metadata}
                 indices={indices}
+                completedRunId={completedRunId}
+                overlayLayer={overlayLayer}
+                overlayOpacity={overlayOpacity}
                 onIndexChange={changeIndex}
               />
             ))}

@@ -27,6 +27,21 @@ from app.backend.services.viewer_service import (
 )
 
 
+
+from fastapi.responses import Response
+
+from app.backend.services.artifact_service import (
+    ArtifactIntegrityError,
+    ArtifactNotFound,
+    ArtifactRunNotComplete,
+)
+from app.backend.services.viewer_overlay_service import (
+    OverlayCaseMismatch,
+    OverlayGeometryMismatch,
+    overlay_slice_png,
+)
+
+
 router = APIRouter(tags=["live cases"])
 
 
@@ -155,6 +170,58 @@ def get_case_viewer_slice(
 
     return Response(
         content=image_bytes,
+        media_type="image/png",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.get(
+    "/cases/{case_id}/viewer/overlays/{run_id}/{layer}/{plane}/{index}"
+)
+def get_case_viewer_overlay(
+    case_id: str,
+    run_id: str,
+    layer: str,
+    plane: str,
+    index: int,
+) -> Response:
+    try:
+        data = overlay_slice_png(
+            case_id, run_id, layer, plane, index
+        )
+    except (OverlayCaseMismatch, OverlayGeometryMismatch) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+    except ArtifactRunNotComplete as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+    except ArtifactNotFound as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Segmentation artifact unavailable.",
+        ) from exc
+    except ArtifactIntegrityError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Segmentation artifact integrity check failed.",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="MRI case or inference run unavailable.",
+        ) from exc
+
+    return Response(
+        content=data,
         media_type="image/png",
         headers={"Cache-Control": "no-store"},
     )

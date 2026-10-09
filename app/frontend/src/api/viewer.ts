@@ -70,3 +70,20 @@ export function viewerSliceUrl(
     `/viewer/slices/${modality}/${plane}/${index}`
   )
 }
+
+
+export type MRIOverlayLayer = 'baseline' | 'final' | 'removed'
+
+export function viewerOverlayUrl(
+  caseId: string,
+  runId: string,
+  layer: MRIOverlayLayer,
+  plane: MRIPlane,
+  index: number,
+): string {
+  return (
+    `${API_BASE}/cases/${encodeURIComponent(caseId)}` +
+    `/viewer/overlays/${encodeURIComponent(runId)}` +
+    `/${layer}/${plane}/${index}`
+  )
+}

@@ -219,3 +219,93 @@
     box-sizing: border-box;
   }
 }
+
+/* M11E2 — genuine segmentation overlays */
+
+.mri-viewer__overlay-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  padding: 13px 15px;
+  margin-bottom: 15px;
+  border: 1px solid #2c3b51;
+  border-radius: 9px;
+  background: #111c2b;
+}
+
+.mri-viewer__overlay-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #b4c6d9;
+  font-size: 12px;
+}
+
+.mri-viewer__overlay-controls select {
+  background: #192739;
+  border: 1px solid #475972;
+  border-radius: 7px;
+  padding: 9px 11px;
+  color: #eef5ff;
+  min-width: 170px;
+}
+
+.mri-viewer__overlay-controls input[type="range"] {
+  accent-color: #58d6bc;
+  width: 175px;
+}
+
+.mri-viewer__overlay-controls :disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.mri-viewer__overlay-legend {
+  color: #aebed0;
+  font-size: 12px;
+  margin-bottom: 9px;
+}
+
+.mri-viewer__overlay-legend[data-layer="final"] {
+  color: #44e09d;
+}
+
+.mri-viewer__overlay-legend[data-layer="baseline"] {
+  color: #ff5f6c;
+}
+
+.mri-viewer__overlay-legend[data-layer="removed"] {
+  color: #ffb645;
+}
+
+.mri-viewer__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mri-viewer__overlay-error {
+  position: absolute;
+  left: 7px;
+  bottom: 7px;
+  z-index: 4;
+  padding: 7px;
+  color: #ffd6c4;
+  background: rgba(45, 23, 25, 0.92);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.mri-viewer__overlay-error button {
+  margin-left: 8px;
+  color: white;
+  background: transparent;
+  border: 1px solid #91666a;
+  border-radius: 4px;
+  cursor: pointer;
+}
