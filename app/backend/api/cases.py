@@ -19,6 +19,14 @@ from app.backend.services.run_service import (
 )
 
 
+from fastapi.responses import Response
+
+from app.backend.services.viewer_service import (
+    viewer_metadata,
+    viewer_slice_png,
+)
+
+
 router = APIRouter(tags=["live cases"])
 
 
@@ -104,4 +112,49 @@ def delete_case(
     return CaseDeleteResponse(
         case_id=case_id,
         deleted=deleted,
+    )
+
+
+@router.get("/cases/{case_id}/viewer/metadata")
+def get_case_viewer_metadata(case_id: str) -> dict:
+    try:
+        return viewer_metadata(case_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Staged MRI case or modality not found.",
+        ) from exc
+
+
+@router.get("/cases/{case_id}/viewer/slices/{modality}/{plane}/{index}")
+def get_case_viewer_slice(
+    case_id: str,
+    modality: str,
+    plane: str,
+    index: int,
+) -> Response:
+    try:
+        image_bytes = viewer_slice_png(
+            case_id, modality, plane, index
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Staged MRI case or modality not found.",
+        ) from exc
+
+    return Response(
+        content=image_bytes,
+        media_type="image/png",
+        headers={"Cache-Control": "no-store"},
     )

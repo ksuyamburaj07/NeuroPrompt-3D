@@ -1,3 +1,4 @@
+import { MRIViewer } from './MRIViewer'
 import { useEffect, useRef, useState } from 'react'
 import {
   artifactUrl,
@@ -48,7 +49,7 @@ function messageFromError(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown request error.'
 }
 
-export function ProcessPage({
+function InferencePanel({
   caseId,
   existingRunId,
   onRunCreated,
@@ -459,5 +460,16 @@ export function ProcessPage({
         <span>03 EXPLORE {terminal && run?.status === 'complete' ? '→' : '·'}</span>
       </footer>
     </main>
+  )
+}
+
+
+// Imaging first; original inference controls remain unchanged.
+export function ProcessPage(props: Props) {
+  return (
+    <div className="mri-workspace">
+      <MRIViewer key={props.caseId} caseId={props.caseId} />
+      <InferencePanel {...props} />
+    </div>
   )
 }
