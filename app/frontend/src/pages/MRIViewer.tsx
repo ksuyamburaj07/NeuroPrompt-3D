@@ -3,6 +3,9 @@ import {
   getViewerMetadata,
   viewerSliceUrl,
   viewerOverlayUrl,
+  getViewerRunMarkers,
+  type ViewerRunMarkers,
+  type ViewerSpatialMarker,
   type MRIModality,
   type MRIPlane,
   type MRIViewerMetadata,
@@ -32,7 +35,56 @@ const modalities: { key: MRIModality; name: string }[] = [
 
 function percentage(index: number, count: number): number {
   if (count <= 1) return 50
-  return Math.max(0, Math.min(100, 100 * index / (count - 1)))
+  return Math.max(0, Math.min(100, 100 * (index + 0.5) / count))
+}
+
+
+function ScientificMarker({
+  kind,
+  marker,
+  plane,
+  indices,
+  metadata,
+}: {
+  kind: 'hotspot' | 'negative-prompt'
+  marker: ViewerSpatialMarker | null
+  plane: MRIPlane
+  indices: SliceIndices
+  metadata: MRIViewerMetadata
+}) {
+  if (!marker) return null
+
+  const [x, y, z] = marker.ras_xyz
+  const [sizeX, sizeY, sizeZ] = metadata.shape_ras_xyz
+
+  if (marker.ras_xyz[metadata.planes[plane].axis] !== indices[plane]) {
+    return null
+  }
+
+  const horizontal = plane === 'sagittal'
+    ? percentage(y, sizeY)
+    : percentage(x, sizeX)
+
+  const vertical = plane === 'axial'
+    ? 100 - percentage(y, sizeY)
+    : 100 - percentage(z, sizeZ)
+
+  const description = kind === 'hotspot'
+    ? 'Frozen uncertainty hotspot'
+    : 'Negative SAM prompt'
+
+  return (
+    <span
+      role="img"
+      aria-label={description}
+      title={`${description}: RAS voxel (${x}, ${y}, ${z})`}
+      className={`mri-viewer__scientific-marker mri-viewer__scientific-marker--${kind}`}
+      style={{
+        left: `${horizontal}%`,
+        top: `${vertical}%`,
+      }}
+    />
+  )
 }
 
 function SlicePane({
@@ -44,6 +96,7 @@ function SlicePane({
   completedRunId,
   overlayLayer,
   overlayOpacity,
+  markers,
   onIndexChange,
 }: {
   caseId: string
@@ -54,6 +107,7 @@ function SlicePane({
   completedRunId: string | null
   overlayLayer: MRIOverlayLayer | 'none'
   overlayOpacity: number
+  markers: ViewerRunMarkers | null
   onIndexChange: (plane: MRIPlane, index: number) => void
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
@@ -145,6 +199,25 @@ function SlicePane({
             )
           )}
 
+          {markers && (
+            <>
+              <ScientificMarker
+                kind="hotspot"
+                marker={markers.hotspot}
+                plane={plane}
+                indices={indices}
+                metadata={metadata}
+              />
+              <ScientificMarker
+                kind="negative-prompt"
+                marker={markers.negative_prompt}
+                plane={plane}
+                indices={indices}
+                metadata={metadata}
+              />
+            </>
+          )}
+
           <div
             className="mri-viewer__crosshair-horizontal"
             style={{ top: `${vertical}%` }}
@@ -194,6 +267,11 @@ export function MRIViewer({
   const [overlayLayer, setOverlayLayer] =
     useState<MRIOverlayLayer | 'none'>('final')
   const [overlayOpacity, setOverlayOpacity] = useState(45)
+  const [markerResult, setMarkerResult] =
+    useState<ViewerRunMarkers | null>(null)
+  const [markerFailure, setMarkerFailure] =
+    useState<{ runId: string; message: string } | null>(null)
+
   const [indices, setIndices] = useState<SliceIndices>({
     axial: 0,
     coronal: 0,
@@ -228,6 +306,66 @@ export function MRIViewer({
       active = false
     }
   }, [caseId])
+
+
+  useEffect(() => {
+    if (!completedRunId) return
+
+    let active = true
+
+    getViewerRunMarkers(caseId, completedRunId)
+      .then((data) => {
+        if (!active) return
+        setMarkerResult(data)
+        setMarkerFailure(null)
+      })
+      .catch((error: unknown) => {
+        if (!active) return
+        setMarkerFailure({
+          runId: completedRunId,
+          message: error instanceof Error
+            ? error.message
+            : 'Unable to retrieve scientific markers.',
+        })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [caseId, completedRunId])
+
+  const displayedMarkers =
+    markerResult?.case_id === caseId &&
+    markerResult.run_id === completedRunId
+      ? markerResult
+      : null
+
+  const displayedMarkerError =
+    markerFailure?.runId === completedRunId
+      ? markerFailure.message
+      : null
+
+  function jumpToMarker(marker: ViewerSpatialMarker | null) {
+    if (!marker || !metadata) return
+
+    const [x, y, z] = marker.ras_xyz
+    const [sizeX, sizeY, sizeZ] = metadata.shape_ras_xyz
+
+    if (
+      ![x, y, z].every(Number.isInteger) ||
+      x < 0 || x >= sizeX ||
+      y < 0 || y >= sizeY ||
+      z < 0 || z >= sizeZ
+    ) {
+      return
+    }
+
+    setIndices({
+      sagittal: x,
+      coronal: y,
+      axial: z,
+    })
+  }
 
   function changeIndex(plane: MRIPlane, index: number) {
     setIndices((previous) => ({
@@ -319,6 +457,61 @@ export function MRIViewer({
         </div>
       )}
 
+
+      {completedRunId && metadata && (
+        <section
+          className="mri-viewer__scientific-controls"
+          aria-label="Uncertainty-guided refinement inspection"
+        >
+          <div className="mri-viewer__scientific-heading">
+            <strong>Uncertainty-guided inspection</strong>
+            {displayedMarkers && (
+              <span>
+                {displayedMarkers.action ?? 'No recorded action'}
+                {' · '}
+                {displayedMarkers.gate_state ?? 'No recorded gate'}
+              </span>
+            )}
+          </div>
+
+          <div className="mri-viewer__scientific-actions">
+            <button
+              type="button"
+              disabled={!displayedMarkers?.hotspot}
+              onClick={() => {
+                jumpToMarker(displayedMarkers?.hotspot ?? null)
+              }}
+            >
+              <span className="mri-viewer__legend-dot mri-viewer__legend-dot--hotspot" />
+              Jump to Hotspot
+            </button>
+
+            <button
+              type="button"
+              disabled={!displayedMarkers?.negative_prompt}
+              onClick={() => {
+                jumpToMarker(displayedMarkers?.negative_prompt ?? null)
+              }}
+            >
+              <span className="mri-viewer__legend-dot mri-viewer__legend-dot--prompt" />
+              Jump to Negative Prompt
+            </button>
+
+            <span className="mri-viewer__scientific-note">
+              {displayedMarkerError
+                ? displayedMarkerError
+                : !displayedMarkers
+                  ? 'Retrieving frozen run markers…'
+                  : displayedMarkers.hotspot
+                    ? `Hotspot variance: ${
+                        displayedMarkers.hotspot_variance ?? 'unavailable'
+                      }`
+                    : 'No uncertainty hotspot recorded for this run'}
+            </span>
+          </div>
+        </section>
+      )}
+
       {loadError ? (
         <div className="mri-viewer__message" role="alert">
           {loadError}
@@ -355,6 +548,7 @@ export function MRIViewer({
                 completedRunId={completedRunId}
                 overlayLayer={overlayLayer}
                 overlayOpacity={overlayOpacity}
+                markers={displayedMarkers}
                 onIndexChange={changeIndex}
               />
             ))}

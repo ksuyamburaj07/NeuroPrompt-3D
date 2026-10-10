@@ -87,3 +87,63 @@ export function viewerOverlayUrl(
     `/${layer}/${plane}/${index}`
   )
 }
+
+/* M11E3 — Frozen scientific marker inspection */
+
+export type ViewerSpatialMarker = {
+  source_zyx: number[]
+  ras_xyz: number[]
+  world_ras_mm: number[]
+}
+
+export type ViewerRunMarkers = {
+  case_id: string
+  run_id: string
+  orientation_convention: 'RAS+'
+  action: string | null
+  gate_state: string | null
+  hotspot_variance: number | null
+  hotspot: ViewerSpatialMarker | null
+  negative_prompt: ViewerSpatialMarker | null
+  sam_used: boolean | null
+}
+
+export async function getViewerRunMarkers(
+  caseId: string,
+  runId: string,
+): Promise<ViewerRunMarkers> {
+  let response: Response
+
+  try {
+    response = await fetch(
+      `${API_BASE}/cases/${encodeURIComponent(caseId)}` +
+      `/viewer/markers/${encodeURIComponent(runId)}`,
+      { cache: 'no-store' },
+    )
+  } catch {
+    throw new Error('Cannot contact the scientific marker backend.')
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Unable to load scientific markers (HTTP ${response.status}).`,
+    )
+  }
+
+  const payload: unknown = await response.json()
+
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !('case_id' in payload) ||
+    payload.case_id !== caseId ||
+    !('run_id' in payload) ||
+    payload.run_id !== runId ||
+    !('orientation_convention' in payload) ||
+    payload.orientation_convention !== 'RAS+'
+  ) {
+    throw new Error('Invalid scientific marker response.')
+  }
+
+  return payload as ViewerRunMarkers
+}

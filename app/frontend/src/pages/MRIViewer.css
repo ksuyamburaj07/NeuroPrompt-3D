@@ -309,3 +309,113 @@
   border-radius: 4px;
   cursor: pointer;
 }
+
+/* M11E3 — uncertainty-guided coordinate inspection */
+
+.mri-viewer__scientific-controls {
+  padding: 13px 15px;
+  margin-bottom: 15px;
+  border: 1px solid #34445c;
+  border-radius: 9px;
+  background: #101a29;
+}
+
+.mri-viewer__scientific-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.mri-viewer__scientific-heading strong {
+  color: #e7edf8;
+}
+
+.mri-viewer__scientific-heading > span {
+  color: #9db5ca;
+  font-variant-numeric: tabular-nums;
+}
+
+.mri-viewer__scientific-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mri-viewer__scientific-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  background: #1a2a3f;
+  border: 1px solid #415873;
+  border-radius: 7px;
+  color: #ecf3ff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mri-viewer__scientific-actions button:hover:not(:disabled) {
+  background: #253c55;
+}
+
+.mri-viewer__scientific-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mri-viewer__scientific-note {
+  color: #b1bfd0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mri-viewer__legend-dot {
+  width: 11px;
+  height: 11px;
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.mri-viewer__legend-dot--hotspot {
+  border: 2px solid #ffbd54;
+  box-sizing: border-box;
+}
+
+.mri-viewer__legend-dot--prompt {
+  background: #b69aff;
+  border: 1px solid #ece4ff;
+  box-sizing: border-box;
+}
+
+.mri-viewer__scientific-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.mri-viewer__scientific-marker--hotspot {
+  z-index: 4;
+  width: 23px;
+  height: 23px;
+  border: 2px solid #ffbd54;
+  border-radius: 50%;
+  background: rgba(255, 189, 84, 0.12);
+  box-shadow: 0 0 9px rgba(255, 189, 84, 0.65);
+}
+
+.mri-viewer__scientific-marker--negative-prompt {
+  z-index: 5;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid #fff;
+  background: #aa85ff;
+  box-shadow: 0 0 5px #aa85ff;
+}

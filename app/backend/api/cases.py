@@ -42,6 +42,13 @@ from app.backend.services.viewer_overlay_service import (
 )
 
 
+from app.backend.services.viewer_marker_service import (
+    ViewerCoordinateError,
+    ViewerRunCaseMismatch,
+    viewer_run_markers,
+)
+
+
 router = APIRouter(tags=["live cases"])
 
 
@@ -225,3 +232,33 @@ def get_case_viewer_overlay(
         media_type="image/png",
         headers={"Cache-Control": "no-store"},
     )
+
+
+@router.get("/cases/{case_id}/viewer/markers/{run_id}")
+def get_case_viewer_markers(case_id: str, run_id: str) -> dict:
+    try:
+        return viewer_run_markers(case_id, run_id)
+
+    except (ViewerCoordinateError, ViewerRunCaseMismatch) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+    except ArtifactRunNotComplete as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="MRI case or inference run unavailable.",
+        ) from exc
