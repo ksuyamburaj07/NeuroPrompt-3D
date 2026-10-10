@@ -262,3 +262,86 @@ def get_case_viewer_markers(case_id: str, run_id: str) -> dict:
             status_code=404,
             detail="MRI case or inference run unavailable.",
         ) from exc
+
+
+@router.get("/cases/{case_id}/viewer/meshes/{run_id}/{layer}")
+def get_case_viewer_mesh(
+    case_id: str,
+    run_id: str,
+    layer: str,
+) -> Response:
+    from app.backend.services.viewer_mesh_service import (
+        ViewerMeshCaseMismatch,
+        ViewerMeshGeometryError,
+        viewer_mesh_ply,
+    )
+
+    try:
+        mesh_bytes = viewer_mesh_ply(case_id, run_id, layer)
+
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    except ArtifactRunNotComplete as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    except (ViewerMeshCaseMismatch, ViewerMeshGeometryError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="MRI case, run or mask artifact unavailable.",
+        ) from exc
+
+    return Response(
+        content=mesh_bytes,
+        media_type="application/octet-stream",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Mesh-Coordinates": "RAS+ millimetres",
+        },
+    )
+
+
+@router.get("/cases/{case_id}/viewer/anatomy/brain")
+def get_case_viewer_anatomy(case_id: str, step: int = 2) -> Response:
+    from app.backend.services.viewer_anatomy_service import (
+        ANATOMY_STEP_VOXELS,
+        viewer_anatomy_ply,
+    )
+    from app.backend.services.viewer_mesh_service import (
+        ViewerMeshGeometryError,
+    )
+
+    try:
+        mesh_bytes = viewer_anatomy_ply(case_id, step=step)
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except ViewerMeshGeometryError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Staged anatomical MRI unavailable.",
+        ) from exc
+
+    return Response(
+        content=mesh_bytes,
+        media_type="application/octet-stream",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Mesh-Coordinates": "RAS+ millimetres",
+            "X-Mesh-Source": "t1n-nonzero-foreground",
+            "X-Mesh-Step-Voxels": str(step),
+        },
+    )

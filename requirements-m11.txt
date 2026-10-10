@@ -19,3 +19,6 @@ torchvision==0.29.0
 # M11C research-console dependency.
 # Pinned after resolver audit against the verified M11 FastAPI stack.
 gradio==6.29.1
+
+# M11E4: read-only 3D surface extraction
+scikit-image==0.26.0

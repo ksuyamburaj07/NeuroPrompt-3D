@@ -147,3 +147,31 @@ export async function getViewerRunMarkers(
 
   return payload as ViewerRunMarkers
 }
+
+/* M11E4 — read-only frozen segmentation mesh */
+
+export type ViewerMeshLayer = 'baseline' | 'final' | 'removed'
+
+export function viewerMeshUrl(
+  caseId: string,
+  runId: string,
+  layer: ViewerMeshLayer,
+): string {
+  return (
+    `${API_BASE}/cases/${encodeURIComponent(caseId)}` +
+    `/viewer/meshes/${encodeURIComponent(runId)}/${layer}`
+  )
+}
+
+
+/* M11E4G — MRI-derived anatomical visualization context */
+
+export function viewerAnatomyUrl(
+  caseId: string,
+  step: 1 | 2 = 2,
+): string {
+  return (
+    `${API_BASE}/cases/${encodeURIComponent(caseId)}` +
+    `/viewer/anatomy/brain?step=${step}`
+  )
+}

@@ -11,6 +11,7 @@ import {
   type MRIViewerMetadata,
   type MRIOverlayLayer,
 } from '../api/viewer'
+import { MeshViewer3D } from './MeshViewer3D'
 import './MRIViewer.css'
 
 type Props = {
@@ -510,6 +511,16 @@ export function MRIViewer({
             </span>
           </div>
         </section>
+      )}
+
+      {metadata && completedRunId && (
+        <MeshViewer3D
+          caseId={caseId}
+          runId={completedRunId}
+          modality={modality}
+          metadata={metadata}
+          indices={indices}
+        />
       )}
 
       {loadError ? (

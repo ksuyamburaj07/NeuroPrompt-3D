@@ -1,0 +1,280 @@
+.mesh3d {
+  margin: 18px 0;
+  padding: 15px;
+  border: 1px solid #30435a;
+  border-radius: 12px;
+  background: #0f1928;
+  color: #ecf3fb;
+}
+
+.mesh3d__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mesh3d__eyebrow {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: #8babc6;
+  margin-bottom: 6px;
+}
+
+.mesh3d__header h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.mesh3d__header p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #9fafc2;
+}
+
+.mesh3d__reset {
+  padding: 9px 13px;
+  border-radius: 7px;
+  border: 1px solid #41617d;
+  background: #1a3047;
+  color: #e8f5ff;
+  cursor: pointer;
+}
+
+.mesh3d__reset:hover {
+  background: #27455f;
+}
+
+.mesh3d__reset:focus-visible {
+  outline: 2px solid #73c9ff;
+  outline-offset: 2px;
+}
+
+.mesh3d__canvas {
+  position: relative;
+  height: 420px;
+  overflow: hidden;
+  border: 1px solid #24354a;
+  border-radius: 9px;
+  background: #0b1420;
+}
+
+.mesh3d__canvas canvas {
+  display: block;
+  touch-action: none;
+}
+
+.mesh3d__loading {
+  display: block;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #d9e7f7;
+}
+
+.mesh3d__error {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  color: #ffb5b5;
+  text-align: center;
+}
+
+.mesh3d__error small {
+  color: #aebed2;
+  overflow-wrap: anywhere;
+}
+
+.mesh3d__footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: #90a9c0;
+}
+
+@media (max-width: 700px) {
+  .mesh3d__canvas {
+    height: 320px;
+  }
+}
+
+/* M11E4E — real MRI anatomical context controls */
+
+.mesh3d__context-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid #293d55;
+  border-radius: 8px;
+  background: #142237;
+}
+
+.mesh3d__context-controls label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #b8c9dc;
+  font-size: 12px;
+}
+
+.mesh3d__context-controls select {
+  padding: 7px 9px;
+  border: 1px solid #46617e;
+  border-radius: 6px;
+  background: #0d1a2b;
+  color: #e6f0fa;
+}
+
+.mesh3d__context-controls input[type="range"] {
+  width: 140px;
+  accent-color: #68cbd7;
+}
+
+.mesh3d__context-controls select:focus-visible,
+.mesh3d__context-controls input:focus-visible {
+  outline: 2px solid #73c9ff;
+  outline-offset: 2px;
+}
+
+/* M11E4G — anatomical context and prediction controls */
+
+.mesh3d__layer-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.mesh3d__layer-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #31445d;
+  border-radius: 8px;
+  background: #142237;
+}
+
+.mesh3d__layer-control label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  font-size: 12px;
+  color: #d3e2f0;
+}
+
+.mesh3d__layer-toggle {
+  font-weight: 600;
+}
+
+.mesh3d__layer-control input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #65c9cc;
+}
+
+.mesh3d__layer-control input[type="range"] {
+  width: 115px;
+  accent-color: #65c9cc;
+}
+
+.mesh3d__layer-control input:focus-visible {
+  outline: 2px solid #73c9ff;
+  outline-offset: 3px;
+}
+
+.mesh3d__context-caption {
+  margin: 0 0 12px;
+  color: #8faac4;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+@media (max-width: 750px) {
+  .mesh3d__layer-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* M11E4H — anatomical detail selection */
+
+.mesh3d__detail-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 11px 12px;
+  margin-bottom: 12px;
+  border: 1px solid #34445b;
+  border-radius: 8px;
+  background: #152238;
+  font-size: 12px;
+  color: #d7e5f2;
+}
+
+.mesh3d__detail-control select {
+  padding: 8px 10px;
+  border: 1px solid #4b647f;
+  border-radius: 6px;
+  background: #101b2d;
+  color: #e8eff8;
+}
+
+.mesh3d__detail-control select:disabled {
+  opacity: 0.5;
+}
+
+.mesh3d__detail-control select:focus-visible {
+  outline: 2px solid #73c9ff;
+  outline-offset: 2px;
+}
+
+.mesh3d__detail-control > span {
+  color: #93abc1;
+  font-size: 11px;
+}
+
+/* M11E4I — focused scientific viewing presets */
+
+.mesh3d__view-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mesh3d__view-presets button {
+  padding: 10px 15px;
+  border: 1px solid #526a82;
+  border-radius: 7px;
+  background: #20344b;
+  color: #eef4fa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mesh3d__view-presets button:hover {
+  background: #2b4963;
+}
+
+.mesh3d__view-presets button:focus-visible {
+  outline: 2px solid #76d0e8;
+  outline-offset: 3px;
+}
