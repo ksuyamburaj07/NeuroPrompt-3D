@@ -305,7 +305,11 @@ def get_case_viewer_mesh(
 
 
 @router.get("/cases/{case_id}/viewer/anatomy/brain")
-def get_case_viewer_anatomy(case_id: str, step: int = 2) -> Response:
+def get_case_viewer_anatomy(
+    case_id: str,
+    step: int = 2,
+    finish: str = "raw",
+) -> Response:
     from app.backend.services.viewer_anatomy_service import (
         ANATOMY_STEP_VOXELS,
         viewer_anatomy_ply,
@@ -315,7 +319,9 @@ def get_case_viewer_anatomy(case_id: str, step: int = 2) -> Response:
     )
 
     try:
-        mesh_bytes = viewer_anatomy_ply(case_id, step=step)
+        mesh_bytes = viewer_anatomy_ply(
+            case_id, step=step, finish=finish
+        )
 
     except ValueError as exc:
         raise HTTPException(
@@ -343,5 +349,6 @@ def get_case_viewer_anatomy(case_id: str, step: int = 2) -> Response:
             "X-Mesh-Coordinates": "RAS+ millimetres",
             "X-Mesh-Source": "t1n-nonzero-foreground",
             "X-Mesh-Step-Voxels": str(step),
+            "X-Mesh-Finish": finish,
         },
     )

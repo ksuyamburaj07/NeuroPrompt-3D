@@ -278,3 +278,14 @@
   outline: 2px solid #76d0e8;
   outline-offset: 3px;
 }
+
+
+/* M11E4L — surface treatment comparison */
+
+.mesh3d__detail-control select:not(:disabled) {
+  cursor: pointer;
+}
+
+.mesh3d__detail-control select:hover:not(:disabled) {
+  border-color: #83aec7;
+}

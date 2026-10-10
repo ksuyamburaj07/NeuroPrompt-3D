@@ -164,3 +164,36 @@ def test_anatomy_detail_options(anatomy_case):
 
     assert len(detailed.content) > len(balanced.content)
     parse_vertices(detailed.content)
+
+
+
+def test_anatomy_surface_treatment(anatomy_case):
+    case_id, _, _ = anatomy_case
+
+    url = f"/api/v1/cases/{case_id}/viewer/anatomy/brain"
+
+    with TestClient(app) as client:
+        raw = client.get(url + "?step=1&finish=raw")
+        default = client.get(url + "?step=1")
+        soft = client.get(url + "?step=1&finish=soft")
+        invalid = client.get(url + "?step=1&finish=unknown")
+        unsupported = client.get(url + "?step=2&finish=soft")
+
+    assert raw.status_code == 200
+    assert default.status_code == 200
+    assert soft.status_code == 200
+
+    assert invalid.status_code == 400
+    assert unsupported.status_code == 400
+
+    assert raw.content == default.content
+    assert raw.content != soft.content
+
+    assert raw.headers["x-mesh-finish"] == "raw"
+    assert soft.headers["x-mesh-finish"] == "soft"
+
+    raw_vertices = parse_vertices(raw.content)
+    soft_vertices = parse_vertices(soft.content)
+
+    assert np.isfinite(raw_vertices).all()
+    assert np.isfinite(soft_vertices).all()

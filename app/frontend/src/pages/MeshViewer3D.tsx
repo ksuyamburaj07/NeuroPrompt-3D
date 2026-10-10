@@ -166,6 +166,8 @@ export function MeshViewer3D({
   const [showAnatomy, setShowAnatomy] = useState(true)
   const [anatomyOpacity, setAnatomyOpacity] = useState(0.30)
   const [anatomyStep, setAnatomyStep] = useState<1 | 2>(2)
+  const [anatomyFinish, setAnatomyFinish] =
+    useState<'raw' | 'soft'>('raw')
 
   const [showSegmentation, setShowSegmentation] = useState(true)
   const [segmentationOpacity, setSegmentationOpacity] =
@@ -177,7 +179,11 @@ export function MeshViewer3D({
   )
 
   const meshUrl = viewerMeshUrl(caseId, runId, 'final')
-  const anatomyUrl = viewerAnatomyUrl(caseId, anatomyStep)
+  const anatomyUrl = viewerAnatomyUrl(
+    caseId,
+    anatomyStep,
+    anatomyFinish,
+  )
 
   return (
     <section
@@ -216,6 +222,7 @@ export function MeshViewer3D({
             setShowAnatomy(true)
             setAnatomyOpacity(1)
             setAnatomyStep(1)
+            setAnatomyFinish('raw')
             setShowSegmentation(false)
             setPlane('none')
           }}
@@ -229,6 +236,7 @@ export function MeshViewer3D({
             setShowAnatomy(true)
             setAnatomyOpacity(0.25)
             setAnatomyStep(2)
+            setAnatomyFinish('raw')
             setShowSegmentation(true)
             setSegmentationOpacity(0.85)
             setPlane('none')
@@ -310,15 +318,45 @@ export function MeshViewer3D({
           value={anatomyStep}
           disabled={!showAnatomy}
           onChange={(event) => {
-            setAnatomyStep(
-              Number(event.target.value) as 1 | 2,
-            )
+            const nextStep =
+              Number(event.target.value) as 1 | 2
+
+            setAnatomyStep(nextStep)
+
+            if (nextStep === 2) {
+              setAnatomyFinish('raw')
+            }
           }}
         >
           <option value={2}>Balanced · 2-voxel step</option>
           <option value={1}>Detailed · 1-voxel step</option>
         </select>
-        <span>Visualization geometry only</span>
+        <label htmlFor="mesh-anatomy-finish">
+          Surface treatment
+        </label>
+        <select
+          id="mesh-anatomy-finish"
+          value={anatomyFinish}
+          disabled={!showAnatomy}
+          onChange={(event) => {
+            const finish =
+              event.target.value as 'raw' | 'soft'
+
+            setAnatomyFinish(finish)
+
+            if (finish === 'soft') {
+              setAnatomyStep(1)
+            }
+          }}
+        >
+          <option value="raw">Original boundary</option>
+          <option value="soft">
+            Gentle smoothing · σ = 0.85
+          </option>
+        </select>
+        <span>
+          Display geometry only · Scientific masks unchanged
+        </span>
       </div>
 
       <p className="mesh3d__context-caption">
@@ -359,7 +397,7 @@ export function MeshViewer3D({
       </div>
 
       <div className="mesh3d__canvas">
-        <MeshErrorBoundary key={`${meshUrl}:${anatomyUrl}`}>
+        <MeshErrorBoundary key={meshUrl}>
           <Canvas
             frameloop="demand"
             dpr={[1, 1.5]}

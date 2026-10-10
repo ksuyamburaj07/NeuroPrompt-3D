@@ -7,6 +7,7 @@ foreground, not a validated brain-tissue segmentation.
 import nibabel as nib
 import numpy as np
 from skimage.measure import marching_cubes
+from scipy.ndimage import gaussian_filter
 
 from app.backend.services.viewer_mesh_service import (
     MAX_PADDED_VOXELS,
@@ -22,11 +23,23 @@ ANATOMY_STEP_VOXELS = 2
 ANATOMY_PADDING = 4
 
 
-def viewer_anatomy_ply(case_id: str, step: int = ANATOMY_STEP_VOXELS) -> bytes:
+def viewer_anatomy_ply(
+    case_id: str,
+    step: int = ANATOMY_STEP_VOXELS,
+    finish: str = "raw",
+) -> bytes:
     """Return a physical-RAS PLY from the staged T1N foreground."""
 
     if step not in (1, ANATOMY_STEP_VOXELS):
         raise ValueError("Anatomical mesh step must be 1 or 2.")
+
+    if finish not in ("raw", "soft"):
+        raise ValueError("Unsupported anatomical surface treatment.")
+
+    if finish == "soft" and step != 1:
+        raise ValueError(
+            "Smoothed anatomy requires 1-voxel detail."
+        )
 
     path = _modality_path(case_id, "t1n")
     image = nib.load(str(path))
@@ -90,8 +103,18 @@ def viewer_anatomy_ply(case_id: str, step: int = ANATOMY_STEP_VOXELS) -> bytes:
     )
 
     # Visualization-only sampling; the source MRI is unchanged.
+    field = padded.astype(np.float32)
+
+    if finish == "soft":
+        # Visualization only: original MRI remains unchanged.
+        field = gaussian_filter(
+            field,
+            sigma=0.85,
+            mode="constant",
+        )
+
     vertices, faces, _, _ = marching_cubes(
-        padded.astype(np.float32),
+        field,
         level=0.5,
         step_size=step,
         allow_degenerate=False,

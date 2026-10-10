@@ -166,12 +166,15 @@ export function viewerMeshUrl(
 
 /* M11E4G — MRI-derived anatomical visualization context */
 
+export type AnatomyFinish = 'raw' | 'soft'
+
 export function viewerAnatomyUrl(
   caseId: string,
   step: 1 | 2 = 2,
+  finish: AnatomyFinish = 'raw',
 ): string {
   return (
     `${API_BASE}/cases/${encodeURIComponent(caseId)}` +
-    `/viewer/anatomy/brain?step=${step}`
+    `/viewer/anatomy/brain?step=${step}&finish=${finish}`
   )
 }
