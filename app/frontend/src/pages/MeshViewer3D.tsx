@@ -5,12 +5,11 @@ import {
   useMemo,
   useRef,
   useState,
-  type ComponentRef,
   type ReactNode,
 } from 'react'
 
 import { Canvas, useLoader } from '@react-three/fiber'
-import { Html, OrbitControls } from '@react-three/drei'
+import { Html } from '@react-three/drei'
 import { DoubleSide } from 'three'
 import { PLYLoader } from 'three/addons/loaders/PLYLoader.js'
 
@@ -23,6 +22,13 @@ import {
 } from '../api/viewer'
 
 import { MRIPlaneTexture3D } from './MRIPlaneTexture3D'
+import { AnatomicalCameraControls, type AnatomicalCameraHandle } from './AnatomicalCameraControls'
+import {
+  ANATOMICAL_LABELS,
+  ANATOMICAL_VIEWS,
+  mriCameraFrame,
+  type CameraViewState,
+} from './anatomicalCamera'
 import './MeshViewer3D.css'
 
 type SliceIndices = Record<MRIPlane, number>
@@ -132,22 +138,6 @@ function AnatomySurface({
   )
 }
 
-function mriWorldCentre(
-  metadata: MRIViewerMetadata,
-): [number, number, number] {
-  const voxelCentre = metadata.shape_ras_xyz.map(
-    (size) => (size - 1) / 2,
-  )
-
-  return [0, 1, 2].map(
-    (row) =>
-      metadata.affine_ras[row][0] * voxelCentre[0] +
-      metadata.affine_ras[row][1] * voxelCentre[1] +
-      metadata.affine_ras[row][2] * voxelCentre[2] +
-      metadata.affine_ras[row][3],
-  ) as [number, number, number]
-}
-
 export function MeshViewer3D({
   caseId,
   runId,
@@ -155,8 +145,10 @@ export function MeshViewer3D({
   metadata,
   indices,
 }: Props) {
-  const controlsRef =
-    useRef<ComponentRef<typeof OrbitControls>>(null)
+  const cameraRef = useRef<AnatomicalCameraHandle>(null)
+  const [cameraView, setCameraView] = useState<CameraViewState>({
+    view: 'home', moving: false,
+  })
 
   const [plane, setPlane] =
     useState<MRIPlane | 'none'>('none')
@@ -173,10 +165,17 @@ export function MeshViewer3D({
   const [segmentationOpacity, setSegmentationOpacity] =
     useState(0.85)
 
-  const centre = useMemo(
-    () => mriWorldCentre(metadata),
+  const cameraFrame = useMemo(
+    () => mriCameraFrame(metadata),
     [metadata],
   )
+  const centre = cameraFrame.centre
+  const activeView = ANATOMICAL_VIEWS.find((view) => view.id === cameraView.view)
+  const cameraStatus = cameraView.moving
+    ? `Moving to ${activeView?.label.toLowerCase() ?? 'overview'} view…`
+    : activeView
+      ? `${activeView.label} view · from the patient's ${activeView.label.toLowerCase()}`
+      : cameraView.view === 'home' ? 'Overview · Superior is up' : 'Free orbit'
 
   const meshUrl = viewerMeshUrl(caseId, runId, 'final')
   const anatomyUrl = viewerAnatomyUrl(
@@ -193,7 +192,7 @@ export function MeshViewer3D({
       <div className="mesh3d__header">
         <div>
           <span className="mesh3d__eyebrow">
-            M11E4 / ANATOMICAL RECONSTRUCTION
+            M11E5A / ANATOMICAL NAVIGATION
           </span>
           <h3>3D Segmentation Explorer</h3>
           <p>
@@ -204,13 +203,29 @@ export function MeshViewer3D({
         <button
           type="button"
           className="mesh3d__reset"
-          onClick={() => controlsRef.current?.reset()}
+          onClick={() => cameraRef.current?.navigate('home')}
         >
           Reset camera
         </button>
       </div>
 
-
+      <div className="mesh3d__camera-controls" role="group" aria-label="Anatomical camera views">
+        <span>View from patient’s</span>
+        {ANATOMICAL_VIEWS.map((view) => (
+          <button
+            key={view.id}
+            type="button"
+            aria-pressed={cameraView.view === view.id}
+            onClick={() => cameraRef.current?.navigate(view.id)}
+          >
+            {view.label} <small>{view.code}</small>
+          </button>
+        ))}
+      </div>
+      <p className="mesh3d__camera-caption">
+        Side views: Superior up · Top and bottom views: Anterior up.
+        {' '}L/R always refer to the patient.
+      </p>
 
       <div
         className="mesh3d__view-presets"
@@ -412,10 +427,7 @@ export function MeshViewer3D({
               near: 0.1,
               far: 1000,
             }}
-            onCreated={({ camera }) => {
-              camera.up.set(0, 0, 1)
-              camera.lookAt(0, 0, 0)
-            }}
+            onCreated={({ camera }) => camera.up.set(0, 0, 1)}
           >
             <color attach="background" args={['#0b1420']} />
 
@@ -470,18 +482,29 @@ export function MeshViewer3D({
               </group>
             </Suspense>
 
-            <OrbitControls
-              ref={controlsRef}
-              makeDefault
-              enableDamping
-              dampingFactor={0.08}
-              enablePan={false}
-              minDistance={70}
-              maxDistance={600}
-              target={[0, 0, 0]}
+            <AnatomicalCameraControls
+              ref={cameraRef}
+              frame={cameraFrame}
+              onViewChange={setCameraView}
             />
           </Canvas>
         </MeshErrorBoundary>
+        <div className="mesh3d__camera-status" role="status" aria-live="polite">
+          {cameraStatus}
+        </div>
+        {activeView && !cameraView.moving && (
+          <div className="mesh3d__orientation" aria-label={`Screen orientation: top ${ANATOMICAL_LABELS[activeView.edges[0]]}, bottom ${ANATOMICAL_LABELS[activeView.edges[1]]}, left ${ANATOMICAL_LABELS[activeView.edges[2]]}, right ${ANATOMICAL_LABELS[activeView.edges[3]]}`}>
+            {(['top', 'bottom', 'left', 'right'] as const).map((edge, index) => (
+              <span
+                key={edge}
+                className={`mesh3d__orientation-${edge}`}
+                title={ANATOMICAL_LABELS[activeView.edges[index]]}
+              >
+                {activeView.edges[index]}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mesh3d__footer">

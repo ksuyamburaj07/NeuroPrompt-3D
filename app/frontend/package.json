@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test:camera": "node scripts/check-anatomical-camera.mts",
     "preview": "vite preview"
   },
   "dependencies": {

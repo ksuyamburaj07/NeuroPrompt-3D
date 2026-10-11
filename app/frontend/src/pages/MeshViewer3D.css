@@ -289,3 +289,108 @@
 .mesh3d__detail-control select:hover:not(:disabled) {
   border-color: #83aec7;
 }
+
+/* M11E5A — camera-only navigation in physical patient RAS+ space. */
+.mesh3d__camera-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mesh3d__camera-controls > span {
+  color: #b8c9dc;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.mesh3d__camera-controls button {
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid #41617d;
+  border-radius: 7px;
+  background: #172b40;
+  color: #edf5fc;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.mesh3d__camera-controls button small {
+  margin-left: 5px;
+  color: #9fb8ce;
+}
+
+.mesh3d__camera-controls button:hover {
+  background: #27455f;
+}
+
+.mesh3d__camera-controls button[aria-pressed="true"] {
+  border-color: #76d0e8;
+  background: #23495a;
+}
+
+.mesh3d__camera-controls button:focus-visible {
+  outline: 2px solid #76d0e8;
+  outline-offset: 3px;
+}
+
+.mesh3d__camera-caption {
+  margin: 8px 0 14px;
+  font-size: 11px;
+  color: #9fafc2;
+  line-height: 1.6;
+}
+
+.mesh3d__camera-status {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  max-width: calc(100% - 20px);
+  padding: 6px 9px;
+  border-radius: 5px;
+  background: #0b1420d9;
+  color: #cce1f2;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.mesh3d__orientation {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mesh3d__orientation span {
+  position: absolute;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: #0b1420c9;
+  color: #8ce2eb;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mesh3d__orientation-top {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mesh3d__orientation-bottom {
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mesh3d__orientation-left {
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.mesh3d__orientation-right {
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
