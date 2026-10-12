@@ -24,6 +24,7 @@ type Props = {
   index: number
   metadata: MRIViewerMetadata
   opacity: number
+  transparentBackground: boolean
 }
 
 type LoadedTexture = {
@@ -111,13 +112,19 @@ export function MRIPlaneTexture3D({
   index,
   metadata,
   opacity,
+  transparentBackground,
 }: Props) {
   const invalidate = useThree((state) => state.invalidate)
 
   const [loaded, setLoaded] = useState<LoadedTexture | null>(null)
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
 
-  const url = viewerSliceUrl(caseId, modality, plane, index)
+  const baseUrl = viewerSliceUrl(
+    caseId, modality, plane, index,
+  )
+  const url = transparentBackground
+    ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}transparent_background=true`
+    : baseUrl
 
   const geometry = useMemo(
     () => makeSliceGeometry(metadata, plane, index),

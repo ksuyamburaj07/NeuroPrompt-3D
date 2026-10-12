@@ -152,6 +152,8 @@ export function MeshViewer3D({
 
   const [plane, setPlane] =
     useState<MRIPlane | 'none'>('none')
+  const [transparentMRIBackground, setTransparentMRIBackground] =
+    useState(false)
 
   const [planeOpacity, setPlaneOpacity] = useState(0.65)
 
@@ -411,6 +413,29 @@ export function MeshViewer3D({
         </label>
       </div>
 
+      <div
+        className="mesh3d__background-study"
+        role="group"
+        aria-label="3D MRI plane background"
+      >
+        <span>MRI plane presentation</span>
+        <button
+          type="button"
+          aria-pressed={!transparentMRIBackground}
+          onClick={() => setTransparentMRIBackground(false)}
+        >
+          Original rectangle
+        </button>
+        <button
+          type="button"
+          aria-pressed={transparentMRIBackground}
+          onClick={() => setTransparentMRIBackground(true)}
+        >
+          Foreground only
+        </button>
+        <small>3D display only · MRI values preserved</small>
+      </div>
+
       <div className="mesh3d__canvas">
         <MeshErrorBoundary key={meshUrl}>
           <Canvas
@@ -477,6 +502,7 @@ export function MeshViewer3D({
                     index={indices[plane]}
                     metadata={metadata}
                     opacity={planeOpacity}
+                    transparentBackground={transparentMRIBackground}
                   />
                 )}
               </group>

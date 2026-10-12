@@ -106,6 +106,39 @@ def _case_volume(case_id: str, modality: str):
     return _load_ras(str(path), path.stat().st_mtime_ns)
 
 
+@lru_cache(maxsize=2)
+def _load_source_foreground(
+    path_string: str,
+    file_mtime_ns: int,
+) -> np.ndarray:
+    """Visualization-only finite, nonzero MRI foreground."""
+    del file_mtime_ns
+
+    image = nib.load(path_string)
+
+    if len(image.shape) != 3:
+        raise ValueError("Viewer requires a three-dimensional MRI.")
+
+    if int(np.prod(image.shape, dtype=np.int64)) > MAX_VOXELS:
+        raise ValueError("MRI exceeds the visualization voxel limit.")
+
+    canonical = nib.as_closest_canonical(image)
+    voxels = canonical.get_fdata(dtype=np.float32)
+
+    return np.isfinite(voxels) & (voxels != 0)
+
+
+def _case_source_foreground(
+    case_id: str,
+    modality: str,
+) -> np.ndarray:
+    path = _modality_path(case_id, modality)
+    return _load_source_foreground(
+        str(path),
+        path.stat().st_mtime_ns,
+    )
+
+
 def viewer_metadata(case_id: str) -> dict:
     volume, affine, original_orientation = _case_volume(
         case_id, "t1n"
@@ -152,11 +185,28 @@ def viewer_metadata(case_id: str) -> dict:
     }
 
 
+def _oriented_slice(
+    volume: np.ndarray,
+    plane: str,
+    index: int,
+) -> np.ndarray:
+    """Use the same RAS display orientation for intensity and alpha."""
+    if plane == "axial":
+        result = volume[:, :, index].T[::-1, :]
+    elif plane == "coronal":
+        result = volume[:, index, :].T[::-1, :]
+    else:
+        result = volume[index, :, :].T[::-1, :]
+
+    return np.ascontiguousarray(result)
+
+
 def viewer_slice_png(
     case_id: str,
     modality: str,
     plane: str,
     index: int,
+    transparent_background: bool = False,
 ) -> bytes:
     if plane not in PLANE_AXES:
         raise ValueError("Unsupported anatomical plane.")
@@ -168,15 +218,31 @@ def viewer_slice_png(
     if index < 0 or index >= volume.shape[axis]:
         raise ValueError("MRI slice index is out of range.")
 
-    if plane == "axial":
-        image_array = volume[:, :, index].T[::-1, :]
-    elif plane == "coronal":
-        image_array = volume[:, index, :].T[::-1, :]
-    else:
-        image_array = volume[index, :, :].T[::-1, :]
-
-    image_array = np.ascontiguousarray(image_array)
+    image_array = _oriented_slice(volume, plane, index)
 
     output = BytesIO()
-    Image.fromarray(image_array).save(output, format="PNG")
+
+    if transparent_background:
+        foreground = _case_source_foreground(
+            case_id, modality
+        )
+
+        if foreground.shape != volume.shape:
+            raise ValueError(
+                "MRI foreground geometry does not match display volume."
+            )
+
+        alpha = (
+            _oriented_slice(foreground, plane, index)
+            .astype(np.uint8) * 255
+        )
+
+        # Preserve every display grayscale value, including dark
+        # foreground pixels. Only the alpha channel changes.
+        image = Image.fromarray(image_array).convert("RGBA")
+        image.putalpha(Image.fromarray(alpha))
+    else:
+        image = Image.fromarray(image_array)
+
+    image.save(output, format="PNG")
     return output.getvalue()

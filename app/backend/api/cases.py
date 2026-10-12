@@ -159,10 +159,15 @@ def get_case_viewer_slice(
     modality: str,
     plane: str,
     index: int,
+    transparent_background: bool = False,
 ) -> Response:
     try:
         image_bytes = viewer_slice_png(
-            case_id, modality, plane, index
+            case_id,
+            modality,
+            plane,
+            index,
+            transparent_background=transparent_background,
         )
     except ValueError as exc:
         raise HTTPException(

@@ -394,3 +394,51 @@
   top: 50%;
   transform: translateY(-50%);
 }
+
+
+/* M11E5C foreground-aware MRI planes */
+
+.mesh3d__background-study {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 0 0 12px;
+}
+
+.mesh3d__background-study > span {
+  color: #b8c9dc;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.mesh3d__background-study button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #41617d;
+  border-radius: 7px;
+  background: #172b40;
+  color: #edf5fc;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mesh3d__background-study button:hover {
+  background: #27455f;
+}
+
+.mesh3d__background-study button[aria-pressed="true"] {
+  border-color: #76d0e8;
+  background: #23495a;
+}
+
+.mesh3d__background-study button:focus-visible {
+  outline: 2px solid #76d0e8;
+  outline-offset: 3px;
+}
+
+.mesh3d__background-study small {
+  color: #9fafc2;
+  font-size: 11px;
+}
