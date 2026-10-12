@@ -520,6 +520,7 @@ export function MRIViewer({
           modality={modality}
           metadata={metadata}
           indices={indices}
+          markers={displayedMarkers}
         />
       )}
 

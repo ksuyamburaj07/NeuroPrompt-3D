@@ -1,3 +1,8 @@
+import type { ViewerRunMarkers } from '../api/viewer'
+import {
+  RemovedRefinementSurface,
+  type RemovalLoadState,
+} from './RemovedRefinementSurface'
 import {
   Component,
   Suspense,
@@ -161,7 +166,8 @@ export function MeshViewer3D({
   modality,
   metadata,
   indices,
-}: Props) {
+  markers,
+}: Props & { markers?: ViewerRunMarkers | null }) {
   const cameraRef = useRef<AnatomicalCameraHandle>(null)
   const [cameraView, setCameraView] = useState<CameraViewState>({
     view: 'home', moving: false,
@@ -189,6 +195,9 @@ export function MeshViewer3D({
     useState<'final' | 'baseline'>('final')
   const [predictionEmphasis, setPredictionEmphasis] =
     useState(false)
+  const [showRemoved, setShowRemoved] = useState(false)
+  const [removalStatus, setRemovalStatus] =
+    useState<RemovalLoadState>('idle')
 
   // Full MRI planes always use full-volume framing.
   const effectiveFit: CameraFitMode =
@@ -208,6 +217,17 @@ export function MeshViewer3D({
       ? `${activeView.label} view · from the patient's ${activeView.label.toLowerCase()}`
       : cameraView.view === 'home' ? 'Overview · Superior is up' : 'Free orbit'
 
+  const removalEligible =
+    markers?.action === 'APPLY_LOCAL_FP' &&
+    markers.sam_used === true
+
+  const removalActive =
+    showRemoved &&
+    removalEligible &&
+    showSegmentation &&
+    predictionLayer === 'final'
+
+  const removalUrl = viewerMeshUrl(caseId, runId, 'removed')
   const meshUrl = viewerMeshUrl(caseId, runId, predictionLayer)
   const anatomyUrl = viewerAnatomyUrl(
     caseId,
@@ -323,6 +343,7 @@ export function MeshViewer3D({
           onClick={() => {
             setPredictionLayer('final')
             setPredictionEmphasis(false)
+            setShowRemoved(false)
             setShowSegmentation(true)
           }}
         >
@@ -334,6 +355,7 @@ export function MeshViewer3D({
           onClick={() => {
             setPredictionLayer('baseline')
             setPredictionEmphasis(false)
+            setShowRemoved(false)
             setShowSegmentation(true)
           }}
         >
@@ -342,6 +364,63 @@ export function MeshViewer3D({
         <small>
           Frozen model outputs · Same RAS geometry ·
           Display colors only
+        </small>
+      </div>
+
+      <div
+        className="mesh3d__refinement-evidence"
+        role="group"
+        aria-label="Frozen automatic refinement evidence"
+      >
+        <span>Refinement evidence</span>
+
+        <button
+          type="button"
+          aria-pressed={removalActive}
+          disabled={!removalEligible}
+          onClick={() => {
+            setPredictionLayer('final')
+            setPredictionEmphasis(true)
+            setShowSegmentation(true)
+            setSegmentationOpacity(1)
+            setShowAnatomy(true)
+            setAnatomyOpacity(0.12)
+            setPlane('none')
+            setFitMode('anatomy')
+            setRemovalStatus('idle')
+            setShowRemoved(true)
+          }}
+        >
+          Final + removed
+        </button>
+
+        <button
+          type="button"
+          disabled={!showRemoved}
+          onClick={() => {
+            setShowRemoved(false)
+            setRemovalStatus('idle')
+          }}
+        >
+          Hide amber
+        </button>
+
+        <small role="status" aria-live="polite">
+          {!markers
+            ? 'Awaiting frozen run evidence'
+            : !removalEligible
+              ? markers.action === 'ABSTAIN'
+                ? 'Policy abstained · No removal expected'
+                : 'No applied SAM refinement recorded'
+              : !removalActive
+                ? 'Amber identifies voxels removed by refinement'
+                : removalStatus === 'loading'
+                  ? 'Loading genuine removal mask surface…'
+                  : removalStatus === 'unavailable'
+                    ? 'Removal surface unavailable · Inspect artifact'
+                    : removalStatus === 'ready'
+                      ? 'Green: final · Amber: removed by refinement'
+                      : 'Preparing refinement evidence'}
         </small>
       </div>
 
@@ -599,6 +678,14 @@ export function MeshViewer3D({
                     opacity={segmentationOpacity}
                     layer={predictionLayer}
                     emphasis={predictionEmphasis}
+                  />
+                )}
+
+                {removalActive && (
+                  <RemovedRefinementSurface
+                    key={removalUrl}
+                    url={removalUrl}
+                    onLoadState={setRemovalStatus}
                   />
                 )}
 

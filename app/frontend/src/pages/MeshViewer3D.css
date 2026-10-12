@@ -543,3 +543,56 @@
   color: #9fafc2;
   font-size: 11px;
 }
+
+
+/* M11E5F refinement evidence */
+
+.mesh3d__refinement-evidence {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 0 0 14px;
+}
+
+.mesh3d__refinement-evidence > span {
+  color: #d8c9a1;
+  font-size: 12px;
+  margin-right: 5px;
+}
+
+.mesh3d__refinement-evidence button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #6a5a3b;
+  border-radius: 7px;
+  background: #242535;
+  color: #f5e7ca;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mesh3d__refinement-evidence button:hover:not(:disabled) {
+  background: #393346;
+}
+
+.mesh3d__refinement-evidence button[aria-pressed="true"] {
+  background: #4b3928;
+  border-color: #efb44b;
+}
+
+.mesh3d__refinement-evidence button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.mesh3d__refinement-evidence button:focus-visible {
+  outline: 2px solid #efb44b;
+  outline-offset: 3px;
+}
+
+.mesh3d__refinement-evidence small {
+  color: #abb9c9;
+  font-size: 11px;
+}
