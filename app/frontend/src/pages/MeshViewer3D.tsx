@@ -73,9 +73,13 @@ class MeshErrorBoundary extends Component<
 function SegmentationSurface({
   url,
   opacity,
+  layer,
+  emphasis,
 }: {
   url: string
   opacity: number
+  layer: 'final' | 'baseline'
+  emphasis: boolean
 }) {
   const loaded = useLoader(PLYLoader, url)
 
@@ -92,12 +96,24 @@ function SegmentationSurface({
   return (
     <mesh geometry={geometry} renderOrder={1}>
       <meshStandardMaterial
-        color="#58e0ad"
-        roughness={0.67}
-        metalness={0.08}
-        transparent
+        color={
+          layer === 'baseline'
+            ? '#ed8f99'
+            : emphasis ? '#75f2c0' : '#58e0ad'
+        }
+        roughness={emphasis ? 0.5 : 0.67}
+        metalness={emphasis ? 0.04 : 0.08}
+        emissive={
+          layer === 'final' && emphasis
+            ? '#124b36'
+            : '#000000'
+        }
+        emissiveIntensity={
+          layer === 'final' && emphasis ? 0.16 : 0
+        }
+        transparent={opacity < 1}
         opacity={opacity}
-        depthWrite={false}
+        depthWrite={opacity >= 1}
         side={DoubleSide}
       />
     </mesh>
@@ -169,6 +185,10 @@ export function MeshViewer3D({
   const [showSegmentation, setShowSegmentation] = useState(true)
   const [segmentationOpacity, setSegmentationOpacity] =
     useState(0.85)
+  const [predictionLayer, setPredictionLayer] =
+    useState<'final' | 'baseline'>('final')
+  const [predictionEmphasis, setPredictionEmphasis] =
+    useState(false)
 
   // Full MRI planes always use full-volume framing.
   const effectiveFit: CameraFitMode =
@@ -188,7 +208,7 @@ export function MeshViewer3D({
       ? `${activeView.label} view · from the patient's ${activeView.label.toLowerCase()}`
       : cameraView.view === 'home' ? 'Overview · Superior is up' : 'Free orbit'
 
-  const meshUrl = viewerMeshUrl(caseId, runId, 'final')
+  const meshUrl = viewerMeshUrl(caseId, runId, predictionLayer)
   const anatomyUrl = viewerAnatomyUrl(
     caseId,
     anatomyStep,
@@ -265,11 +285,64 @@ export function MeshViewer3D({
             setAnatomyFinish('raw')
             setShowSegmentation(true)
             setSegmentationOpacity(0.85)
+            setPredictionLayer('final')
+            setPredictionEmphasis(false)
             setPlane('none')
           }}
         >
           Inspect prediction
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setShowAnatomy(true)
+            setAnatomyOpacity(0.10)
+            setAnatomyStep(2)
+            setAnatomyFinish('raw')
+            setShowSegmentation(true)
+            setSegmentationOpacity(1)
+            setPredictionLayer('final')
+            setPredictionEmphasis(true)
+            setPlane('none')
+            setFitMode('anatomy')
+          }}
+        >
+          Spotlight prediction
+        </button>
+      </div>
+
+      <div
+        className="mesh3d__prediction-compare"
+        role="group"
+        aria-label="Compare frozen model prediction surfaces"
+      >
+        <span>Model surface</span>
+        <button
+          type="button"
+          aria-pressed={predictionLayer === 'final'}
+          onClick={() => {
+            setPredictionLayer('final')
+            setPredictionEmphasis(false)
+            setShowSegmentation(true)
+          }}
+        >
+          Final · green
+        </button>
+        <button
+          type="button"
+          aria-pressed={predictionLayer === 'baseline'}
+          onClick={() => {
+            setPredictionLayer('baseline')
+            setPredictionEmphasis(false)
+            setShowSegmentation(true)
+          }}
+        >
+          Baseline · coral
+        </button>
+        <small>
+          Frozen model outputs · Same RAS geometry ·
+          Display colors only
+        </small>
       </div>
 
       <div
@@ -477,7 +550,7 @@ export function MeshViewer3D({
       </div>
 
       <div className="mesh3d__canvas">
-        <MeshErrorBoundary key={meshUrl}>
+        <MeshErrorBoundary key={`${caseId}:${runId}`}>
           <Canvas
             frameloop="demand"
             dpr={[1, 1.5]}
@@ -524,6 +597,8 @@ export function MeshViewer3D({
                   <SegmentationSurface
                     url={meshUrl}
                     opacity={segmentationOpacity}
+                    layer={predictionLayer}
+                    emphasis={predictionEmphasis}
                   />
                 )}
 
