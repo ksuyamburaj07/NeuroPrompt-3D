@@ -193,7 +193,12 @@ for (const fixture of fixtures) {
         if (step === 64) assert.ok(quaternion.angleTo(to.quaternion) < 1e-7)
         if (interpolatedDistance + 1e-7 < fitDistance) intermediateClips += 1
         assert.ok(distance <= limits.maxDistance + 1e-7, `intermediate radius ${distance} exceeds controls/far-bound maximum ${limits.maxDistance}`)
-        const camera = cameraFor({ quaternion, distance, up: new Vector3(0, 1, 0).applyQuaternion(quaternion) }, aspect)
+        const camera = cameraFor({
+          quaternion,
+          distance,
+          up: new Vector3(0, 1, 0).applyQuaternion(quaternion),
+          target: new Vector3(),
+        }, aspect)
         camera.near = limits.near
         camera.far = limits.far
         camera.updateProjectionMatrix()
@@ -254,6 +259,64 @@ check('clearing pending damping prevents drift after a programmatic home pose', 
   vectorNear(camera.up, home.up, 'stable reset up')
   controls.dispose()
 })
+
+// Foreground-target framing must not change physical RAS orientation.
+for (const fixture of fixtures) {
+  const source = fixture.metadata
+  const shape = source.shape_ras_xyz
+  const lower = shape.map((n) => Math.floor(n * 0.11))
+  const upper = shape.map((n, axis) =>
+    Math.max(lower[axis] + 1, Math.ceil(n * 0.82))
+  )
+
+  const focusedMetadata: Metadata = {
+    ...source,
+    foreground_bounds_ras_xyz: {
+      lower,
+      upper_exclusive: upper,
+    },
+  }
+
+  const full = mriCameraFrame(focusedMetadata, 'volume')
+  const focus = mriCameraFrame(focusedMetadata, 'anatomy')
+
+  check(`${fixture.name} foreground frame`, () => {
+    assert.equal(full.sourceSignature, focus.sourceSignature)
+    vectorNear(
+      new Vector3(...full.centre),
+      new Vector3(...focus.centre),
+      'unchanged MRI scene origin',
+    )
+    assert.ok(focus.radius < full.radius)
+    assert.equal(focus.corners.length, 8)
+  })
+
+  for (const aspect of [0.08, 0.45, 1, 2.4]) {
+    for (const view of allViews) {
+      check(`${fixture.name} ${view} focused aspect ${aspect}`, () => {
+        const pose = anatomicalCameraPose(
+          view, focus, fov, aspect,
+        )
+        const camera = cameraFor(pose, aspect)
+
+        // Existing geometry is translated by volume centre.
+        // The new camera orbits around the relative foreground centre.
+        camera.position.add(pose.target)
+
+        const limits = mriCameraLimits(focus, fov, aspect)
+        camera.near = limits.near
+        camera.far = limits.far
+        camera.updateProjectionMatrix()
+
+        const originalSceneCorners = focus.corners.map(
+          (corner) => corner.clone().add(pose.target)
+        )
+
+        fits(camera, originalSceneCorners, 1 / 1.12)
+      })
+    }
+  }
+}
 
 console.log(`Camera geometry: ${checked} checks passed; ${failures.length} failed.`)
 console.log(`Transition framing: ${intermediateClips} sampled poses verified with the extra distance required beyond endpoint interpolation.`)

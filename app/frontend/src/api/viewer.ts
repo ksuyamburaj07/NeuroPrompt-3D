@@ -19,6 +19,10 @@ export type MRIViewerMetadata = {
   orientation_convention: string
   original_axis_codes: string[]
   shape_ras_xyz: number[]
+  foreground_bounds_ras_xyz?: {
+    lower: number[]
+    upper_exclusive: number[]
+  }
   affine_ras: number[][]
   voxel_spacing_ras_mm: number[]
   display_intensity: string

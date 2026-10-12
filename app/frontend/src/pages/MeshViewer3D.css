@@ -442,3 +442,56 @@
   color: #9fafc2;
   font-size: 11px;
 }
+
+
+/* M11E5D anatomical framing */
+
+.mesh3d__fit-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 0 0 12px;
+}
+
+.mesh3d__fit-controls > span {
+  color: #b8c9dc;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.mesh3d__fit-controls button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #41617d;
+  border-radius: 7px;
+  background: #172b40;
+  color: #edf5fc;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mesh3d__fit-controls button:hover:not(:disabled) {
+  background: #27455f;
+}
+
+.mesh3d__fit-controls button[aria-pressed="true"] {
+  border-color: #76d0e8;
+  background: #23495a;
+}
+
+.mesh3d__fit-controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mesh3d__fit-controls button:focus-visible {
+  outline: 2px solid #76d0e8;
+  outline-offset: 3px;
+}
+
+.mesh3d__fit-controls small {
+  color: #9fafc2;
+  font-size: 11px;
+}

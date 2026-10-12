@@ -33,6 +33,7 @@ type Props = {
 type Transition = {
   view: CameraView
   from: Quaternion
+  fromTarget: Vector3
   fromDistance: number
   fromFitRatio: number
   to: ReturnType<typeof anatomicalCameraPose>
@@ -48,18 +49,25 @@ export function AnatomicalCameraControls({ ref, frame, onViewChange }: Props) {
   const transition = useRef<Transition | null>(null)
   const currentView = useRef<CameraView | 'free'>('home')
   const initializedFrame = useRef<MRICameraFrame | null>(null)
-  const scratch = useRef({ quaternion: new Quaternion(), offset: new Vector3() })
+  const scratch = useRef({
+    quaternion: new Quaternion(),
+    offset: new Vector3(),
+    target: new Vector3(),
+  })
 
   const applyPose = useCallback((pose: ReturnType<typeof anatomicalCameraPose>) => {
     const camera = get().camera as PerspectiveCamera
-    camera.position.set(0, 0, pose.distance).applyQuaternion(pose.quaternion)
+    camera.position
+      .set(0, 0, pose.distance)
+      .applyQuaternion(pose.quaternion)
+      .add(pose.target)
     camera.quaternion.copy(pose.quaternion)
     camera.up.copy(pose.up)
     camera.zoom = 1
     camera.updateProjectionMatrix()
     const controls = controlsRef.current
     if (controls) {
-      controls.target.set(0, 0, 0)
+      controls.target.copy(pose.target)
       controls.enabled = true
       controls.update()
     }
@@ -104,8 +112,11 @@ export function AnatomicalCameraControls({ ref, frame, onViewChange }: Props) {
     transition.current = {
       view,
       from: camera.quaternion.clone(),
-      fromDistance: camera.position.length(),
-      fromFitRatio: Math.min(1, camera.position.length() / fittedCameraDistance(
+      fromTarget: controls.target.clone(),
+      fromDistance: camera.position.distanceTo(controls.target),
+      fromFitRatio: Math.min(
+        1,
+        camera.position.distanceTo(controls.target) / fittedCameraDistance(
         frame, camera.quaternion, camera.fov, camera.aspect,
       )),
       to,
@@ -131,12 +142,41 @@ export function AnatomicalCameraControls({ ref, frame, onViewChange }: Props) {
     camera.updateProjectionMatrix()
 
     if (initializedFrame.current !== frame) {
+      const previousFrame = initializedFrame.current
+      const sameMRI = previousFrame !== null &&
+        previousFrame.sourceSignature === frame.sourceSignature
+
       initializedFrame.current = frame
       transition.current = null
-      currentView.current = 'home'
       clearInertia()
-      applyPose(home)
-      onViewChange({ view: 'home', moving: false })
+
+      if (!sameMRI) {
+        currentView.current = 'home'
+        applyPose(home)
+        onViewChange({ view: 'home', moving: false })
+      } else if (currentView.current === 'free') {
+        // Preserve arbitrary manual orientation, but refit the
+        // newly selected physical foreground or full volume.
+        const pose = {
+          quaternion: camera.quaternion.clone(),
+          distance: fittedCameraDistance(
+            frame, camera.quaternion, camera.fov, camera.aspect,
+          ),
+          up: camera.up.clone(),
+          target: new Vector3(...frame.target),
+        }
+
+        applyPose(pose)
+        onViewChange({ view: 'free', moving: false })
+      } else {
+        const view = currentView.current
+        applyPose(
+          anatomicalCameraPose(
+            view, frame, camera.fov, camera.aspect,
+          )
+        )
+        onViewChange({ view, moving: false })
+      }
     } else if (transition.current) {
       transition.current.to = anatomicalCameraPose(
         transition.current.view, frame, camera.fov, camera.aspect,
@@ -177,7 +217,7 @@ export function AnatomicalCameraControls({ ref, frame, onViewChange }: Props) {
     active.startedAt ??= now
     const progress = Math.min(1, (now - active.startedAt) / 450)
     const eased = progress * progress * (3 - 2 * progress)
-    const { quaternion, offset } = scratch.current
+    const { quaternion, offset, target } = scratch.current
     quaternion.slerpQuaternions(active.from, active.to.quaternion, eased)
     const interpolatedDistance = active.fromDistance + (active.to.distance - active.fromDistance) * eased
     // Keep fitted views visible throughout their arc. If the user was zoomed
@@ -186,7 +226,13 @@ export function AnatomicalCameraControls({ ref, frame, onViewChange }: Props) {
     const distance = Math.max(interpolatedDistance, fitRatio * fittedCameraDistance(
       frame, quaternion, camera.fov, camera.aspect,
     ))
-    camera.position.copy(offset.set(0, 0, distance).applyQuaternion(quaternion))
+    target.lerpVectors(
+      active.fromTarget, active.to.target, eased,
+    )
+    camera.position
+      .copy(offset.set(0, 0, distance).applyQuaternion(quaternion))
+      .add(target)
+    controlsRef.current?.target.copy(target)
     camera.quaternion.copy(quaternion)
     camera.up.set(0, 1, 0).applyQuaternion(quaternion)
 

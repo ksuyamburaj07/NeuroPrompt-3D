@@ -27,6 +27,7 @@ import {
   ANATOMICAL_LABELS,
   ANATOMICAL_VIEWS,
   mriCameraFrame,
+  type CameraFitMode,
   type CameraViewState,
 } from './anatomicalCamera'
 import './MeshViewer3D.css'
@@ -152,6 +153,8 @@ export function MeshViewer3D({
 
   const [plane, setPlane] =
     useState<MRIPlane | 'none'>('none')
+  const [fitMode, setFitMode] =
+    useState<CameraFitMode>('volume')
   const [transparentMRIBackground, setTransparentMRIBackground] =
     useState(false)
 
@@ -167,9 +170,15 @@ export function MeshViewer3D({
   const [segmentationOpacity, setSegmentationOpacity] =
     useState(0.85)
 
+  // Full MRI planes always use full-volume framing.
+  const effectiveFit: CameraFitMode =
+    plane === 'none' && metadata.foreground_bounds_ras_xyz
+      ? fitMode
+      : 'volume'
+
   const cameraFrame = useMemo(
-    () => mriCameraFrame(metadata),
-    [metadata],
+    () => mriCameraFrame(metadata, effectiveFit),
+    [metadata, effectiveFit],
   )
   const centre = cameraFrame.centre
   const activeView = ANATOMICAL_VIEWS.find((view) => view.id === cameraView.view)
@@ -434,6 +443,37 @@ export function MeshViewer3D({
           Foreground only
         </button>
         <small>3D display only · MRI values preserved</small>
+      </div>
+
+      <div
+        className="mesh3d__fit-controls"
+        role="group"
+        aria-label="3D anatomical framing"
+      >
+        <span>Camera framing</span>
+        <button
+          type="button"
+          aria-pressed={effectiveFit === 'volume'}
+          onClick={() => setFitMode('volume')}
+        >
+          Fit volume
+        </button>
+        <button
+          type="button"
+          aria-pressed={effectiveFit === 'anatomy'}
+          disabled={
+            plane !== 'none' ||
+            !metadata.foreground_bounds_ras_xyz
+          }
+          onClick={() => setFitMode('anatomy')}
+        >
+          Focus anatomy
+        </button>
+        <small>
+          {plane !== 'none'
+            ? 'Full-volume framing while MRI slice is displayed'
+            : 'Foreground bounds from T1N · Display-only framing'}
+        </small>
       </div>
 
       <div className="mesh3d__canvas">

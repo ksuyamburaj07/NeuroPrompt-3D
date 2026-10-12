@@ -146,11 +146,31 @@ def viewer_metadata(case_id: str) -> dict:
 
     x, y, z = map(int, volume.shape)
 
+    foreground = _case_source_foreground(case_id, "t1n")
+
+    if foreground.shape != volume.shape or not foreground.any():
+        raise ValueError(
+            "MRI foreground bounds are unavailable or incompatible."
+        )
+
+    occupied_axes = [
+        np.flatnonzero(foreground.any(axis=(1, 2))),
+        np.flatnonzero(foreground.any(axis=(0, 2))),
+        np.flatnonzero(foreground.any(axis=(0, 1))),
+    ]
+
+    lower = [int(axis[0]) for axis in occupied_axes]
+    upper = [int(axis[-1]) + 1 for axis in occupied_axes]
+
     return {
         "case_id": case_id,
         "orientation_convention": "RAS+",
         "original_axis_codes": original_orientation,
         "shape_ras_xyz": [x, y, z],
+        "foreground_bounds_ras_xyz": {
+            "lower": lower,
+            "upper_exclusive": upper,
+        },
         "affine_ras": affine,
         "voxel_spacing_ras_mm": [
             float(value)
