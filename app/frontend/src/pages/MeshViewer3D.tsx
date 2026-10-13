@@ -35,6 +35,10 @@ import {
   type CameraFitMode,
   type CameraViewState,
 } from './anatomicalCamera'
+import {
+  enhanceScientificSurface,
+  type SurfaceEnhancementStatus,
+} from './scientificSurfaceSmoothing'
 import './MeshViewer3D.css'
 
 type SliceIndices = Record<MRIPlane, number>
@@ -80,23 +84,41 @@ function SegmentationSurface({
   opacity,
   layer,
   emphasis,
+  treatment,
+  onSurfaceStatus,
 }: {
   url: string
   opacity: number
   layer: 'final' | 'baseline'
   emphasis: boolean
+  treatment: 'original' | 'enhanced'
+  onSurfaceStatus: (status: SurfaceEnhancementStatus) => void
 }) {
   const loaded = useLoader(PLYLoader, url)
 
-  const geometry = useMemo(() => {
-    const result = loaded.clone()
-    result.computeVertexNormals()
-    return result
-  }, [loaded])
+  const surface = useMemo(() => {
+    if (treatment === 'enhanced') {
+      return enhanceScientificSurface(loaded)
+    }
+
+    const geometry = loaded.clone()
+    geometry.computeVertexNormals()
+
+    return {
+      geometry,
+      status: 'original' as const,
+    }
+  }, [loaded, treatment])
 
   useEffect(() => {
-    return () => geometry.dispose()
-  }, [geometry])
+    onSurfaceStatus(surface.status)
+  }, [surface.status, onSurfaceStatus])
+
+  useEffect(() => {
+    return () => surface.geometry.dispose()
+  }, [surface.geometry])
+
+  const geometry = surface.geometry
 
   return (
     <mesh geometry={geometry} renderOrder={1}>
@@ -106,15 +128,25 @@ function SegmentationSurface({
             ? '#ed8f99'
             : emphasis ? '#75f2c0' : '#58e0ad'
         }
-        roughness={emphasis ? 0.5 : 0.67}
-        metalness={emphasis ? 0.04 : 0.08}
+        roughness={
+          treatment === 'enhanced'
+            ? 0.79
+            : emphasis ? 0.5 : 0.67
+        }
+        metalness={
+          treatment === 'enhanced'
+            ? 0
+            : emphasis ? 0.04 : 0.08
+        }
         emissive={
           layer === 'final' && emphasis
             ? '#124b36'
             : '#000000'
         }
         emissiveIntensity={
-          layer === 'final' && emphasis ? 0.16 : 0
+          layer === 'final' && emphasis
+            ? treatment === 'enhanced' ? 0.06 : 0.16
+            : 0
         }
         transparent={opacity < 1}
         opacity={opacity}
@@ -195,6 +227,11 @@ export function MeshViewer3D({
     useState<'final' | 'baseline'>('final')
   const [predictionEmphasis, setPredictionEmphasis] =
     useState(false)
+  const [surfaceTreatment, setSurfaceTreatment] =
+    useState<'original' | 'enhanced'>('original')
+  const [surfaceStatus, setSurfaceStatus] =
+    useState<SurfaceEnhancementStatus>('original')
+
   const [showRemoved, setShowRemoved] = useState(false)
   const [removalStatus, setRemovalStatus] =
     useState<RemovalLoadState>('idle')
@@ -329,6 +366,40 @@ export function MeshViewer3D({
         >
           Spotlight prediction
         </button>
+      </div>
+
+      <div
+        className="mesh3d__surface-treatment"
+        role="group"
+        aria-label="Scientific prediction surface treatment"
+      >
+        <span>Surface treatment</span>
+
+        <button
+          type="button"
+          aria-pressed={surfaceTreatment === 'original'}
+          onClick={() => setSurfaceTreatment('original')}
+        >
+          Original geometry
+        </button>
+
+        <button
+          type="button"
+          aria-pressed={surfaceTreatment === 'enhanced'}
+          onClick={() => setSurfaceTreatment('enhanced')}
+        >
+          Enhanced display
+        </button>
+
+        <small role="status" aria-live="polite">
+          {surfaceTreatment === 'original'
+            ? 'Voxel-faithful marching-cubes surface'
+            : surfaceStatus === 'fallback'
+              ? 'Enhancement rejected by geometry safeguards · Original retained'
+              : surfaceStatus === 'enhanced'
+                ? '4 smoothing pairs · Display-only · Frozen mask unchanged'
+                : 'Preparing enhanced geometry…'}
+        </small>
       </div>
 
       <div
@@ -678,6 +749,8 @@ export function MeshViewer3D({
                     opacity={segmentationOpacity}
                     layer={predictionLayer}
                     emphasis={predictionEmphasis}
+                    treatment={surfaceTreatment}
+                    onSurfaceStatus={setSurfaceStatus}
                   />
                 )}
 
