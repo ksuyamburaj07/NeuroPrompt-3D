@@ -282,7 +282,8 @@ export function MeshViewer3D({
     setAnatomyOpacity(0.12)
     setPlane('none')
     setFitMode('anatomy')
-    setRemovalStatus('idle')
+    // Preserve the load status if evidence is already mounted.
+    // The mesh loader reports loading/ready on actual mount.
     setShowRemoved(true)
   }
 
