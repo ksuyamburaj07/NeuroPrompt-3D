@@ -1,6 +1,6 @@
 import { Matrix4, Quaternion, Vector3 } from 'three'
 
-import type { MRIViewerMetadata } from '../api/viewer'
+import type { MRIPlane, MRIViewerMetadata } from '../api/viewer'
 
 export const ANATOMICAL_VIEWS = [
   { id: 'left', label: 'Left', code: 'L', direction: [-1, 0, 0], up: [0, 0, 1], edges: ['S', 'I', 'A', 'P'] },
@@ -16,6 +16,20 @@ export type CameraView = AnatomicalView | 'home'
 export type CameraViewState = {
   view: CameraView | 'free'
   moving: boolean
+}
+
+// Anatomically aligned MRI slice for each camera direction.
+// Free orbit and home default to sagittal when inspection begins.
+export function mriPlaneForView(
+  view: CameraView | 'free',
+): MRIPlane {
+  if (view === 'anterior' || view === 'posterior') {
+    return 'coronal'
+  }
+  if (view === 'superior' || view === 'inferior') {
+    return 'axial'
+  }
+  return 'sagittal'
 }
 
 export const ANATOMICAL_LABELS: Record<string, string> = {

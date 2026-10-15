@@ -32,6 +32,7 @@ import {
   ANATOMICAL_LABELS,
   ANATOMICAL_VIEWS,
   mriCameraFrame,
+  mriPlaneForView,
   type CameraFitMode,
   type CameraViewState,
 } from './anatomicalCamera'
@@ -208,7 +209,7 @@ export function MeshViewer3D({
   const [plane, setPlane] =
     useState<MRIPlane | 'none'>('none')
   const [fitMode, setFitMode] =
-    useState<CameraFitMode>('volume')
+    useState<CameraFitMode>('anatomy')
   const [transparentMRIBackground, setTransparentMRIBackground] =
     useState(false)
 
@@ -319,7 +320,14 @@ export function MeshViewer3D({
             key={view.id}
             type="button"
             aria-pressed={cameraView.view === view.id}
-            onClick={() => cameraRef.current?.navigate(view.id)}
+            onClick={() => {
+              // Match the MRI slice to the selected anatomical view.
+              // Prediction-only mode keeps its slice hidden.
+              if (plane !== 'none') {
+                setPlane(mriPlaneForView(view.id))
+              }
+              cameraRef.current?.navigate(view.id)
+            }}
           >
             {view.label} <small>{view.code}</small>
           </button>
@@ -337,15 +345,20 @@ export function MeshViewer3D({
         <button
           type="button"
           onClick={() => {
+            // Show actual MRI anatomy rather than implying that
+            // the foreground envelope is a cortical reconstruction.
             setShowAnatomy(true)
-            setAnatomyOpacity(1)
-            setAnatomyStep(1)
+            setAnatomyOpacity(0.15)
+            setAnatomyStep(2)
             setAnatomyFinish('raw')
             setShowSegmentation(false)
-            setPlane('none')
+            setShowRemoved(false)
+            setPlane(mriPlaneForView(cameraView.view))
+            setTransparentMRIBackground(true)
+            setFitMode('volume')
           }}
         >
-          Inspect brain surface
+          Inspect MRI anatomy
         </button>
 
         <button
@@ -360,6 +373,7 @@ export function MeshViewer3D({
             setPredictionLayer('final')
             setPredictionEmphasis(false)
             setPlane('none')
+            setFitMode('anatomy')
           }}
         >
           Inspect prediction
@@ -395,6 +409,42 @@ export function MeshViewer3D({
         >
           Show refinement evidence
         </button>
+      </div>
+
+      <div
+        className="mesh3d__evidence-key"
+        aria-label="Visible 3D scientific layers"
+      >
+        {showAnatomy && (
+          <span>
+            <i className="mesh3d__key-dot mesh3d__key-dot--anatomy"
+               aria-hidden="true" />
+            MRI foreground envelope
+          </span>
+        )}
+        {showSegmentation && (
+          <span>
+            <i
+              className={
+                predictionLayer === 'final'
+                  ? 'mesh3d__key-dot mesh3d__key-dot--final'
+                  : 'mesh3d__key-dot mesh3d__key-dot--baseline'
+              }
+              aria-hidden="true"
+            />
+            {predictionLayer === 'final'
+              ? 'Final model prediction'
+              : 'Baseline model prediction'}
+          </span>
+        )}
+        {removalActive && (
+          <span>
+            <i className="mesh3d__key-dot mesh3d__key-dot--removed"
+               aria-hidden="true" />
+            Voxels removed by refinement
+          </span>
+        )}
+        <small>Read-only display · Not clinical ground truth</small>
       </div>
 
       <div className="mesh3d__canvas">

@@ -646,10 +646,10 @@
 }
 
 
-/* M11E6A2 — Prioritize the genuine imaging canvas. */
+/* M11E6A2 / M11E6A3A — Foreground-focused imaging canvas. */
 
 .mesh3d__canvas {
-  height: clamp(440px, 58vh, 650px);
+  height: clamp(500px, 68vh, 740px);
 }
 
 .mesh3d__refinement-preset {
@@ -718,5 +718,70 @@
 
   .mesh3d__advanced-body {
     padding: 14px 12px 4px;
+  }
+}
+
+
+/* M11E6A3A — scientific layer legend */
+
+.mesh3d__evidence-key {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 12px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #30435a;
+  border-radius: 8px;
+  background: #101f30;
+}
+
+.mesh3d__evidence-key > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #dce8f4;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mesh3d__evidence-key > small {
+  margin-left: auto;
+  color: #9fafc2;
+  font-size: 11px;
+}
+
+.mesh3d__key-dot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.mesh3d__key-dot--anatomy {
+  background: #e5b8ad;
+}
+
+.mesh3d__key-dot--final {
+  background: #58e0ad;
+}
+
+.mesh3d__key-dot--baseline {
+  background: #ed8f99;
+}
+
+.mesh3d__key-dot--removed {
+  background: #efb44b;
+}
+
+@media (max-width: 700px) {
+  .mesh3d__evidence-key {
+    gap: 8px 15px;
+  }
+
+  .mesh3d__evidence-key > small {
+    margin-left: 0;
+    width: 100%;
   }
 }

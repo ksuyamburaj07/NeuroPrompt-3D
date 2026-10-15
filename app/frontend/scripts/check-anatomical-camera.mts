@@ -8,6 +8,7 @@ import {
   fittedCameraDistance,
   mriCameraFrame,
   mriCameraLimits,
+  mriPlaneForView,
   type CameraView,
 } from '../src/pages/anatomicalCamera.ts'
 
@@ -51,6 +52,23 @@ function metadata(shape: Point, affine: number[][]): Metadata {
       sagittal: { axis: 0, count: shape[0], center_index: 0, width: shape[1], height: shape[2] },
     },
   }
+}
+
+const planePairs = [
+  ['left', 'sagittal'],
+  ['right', 'sagittal'],
+  ['anterior', 'coronal'],
+  ['posterior', 'coronal'],
+  ['superior', 'axial'],
+  ['inferior', 'axial'],
+  ['home', 'sagittal'],
+  ['free', 'sagittal'],
+] as const
+
+for (const [view, expected] of planePairs) {
+  check(`${view} maps to correct MRI plane`, () => {
+    assert.equal(mriPlaneForView(view), expected)
+  })
 }
 
 const rotation = Math.PI / 7
