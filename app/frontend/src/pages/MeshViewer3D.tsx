@@ -272,6 +272,20 @@ export function MeshViewer3D({
     anatomyFinish,
   )
 
+  function inspectRefinementEvidence() {
+    if (!removalEligible) return
+    setPredictionLayer('final')
+    setPredictionEmphasis(true)
+    setShowSegmentation(true)
+    setSegmentationOpacity(1)
+    setShowAnatomy(true)
+    setAnatomyOpacity(0.12)
+    setPlane('none')
+    setFitMode('anatomy')
+    setRemovalStatus('idle')
+    setShowRemoved(true)
+  }
+
   return (
     <section
       className="mesh3d"
@@ -366,8 +380,150 @@ export function MeshViewer3D({
         >
           Spotlight prediction
         </button>
+
+        <button
+          type="button"
+          className="mesh3d__refinement-preset"
+          disabled={!removalEligible}
+          onClick={inspectRefinementEvidence}
+          title={
+            removalEligible
+              ? 'Display final prediction and genuinely removed voxels'
+              : 'No applied refinement evidence available for this run'
+          }
+        >
+          Show refinement evidence
+        </button>
       </div>
 
+      <div className="mesh3d__canvas">
+        <MeshErrorBoundary key={`${caseId}:${runId}`}>
+          <Canvas
+            frameloop="demand"
+            dpr={[1, 1.5]}
+            gl={{
+              antialias: true,
+              alpha: false,
+              powerPreference: 'low-power',
+            }}
+            camera={{
+              position: [128, -157, 125],
+              fov: 43,
+              near: 0.1,
+              far: 1000,
+            }}
+            onCreated={({ camera }) => camera.up.set(0, 0, 1)}
+          >
+            <color attach="background" args={['#0b1420']} />
+
+            <ambientLight intensity={1.3} />
+
+            <directionalLight
+              position={[100, -80, 160]}
+              intensity={2.5}
+            />
+
+            <directionalLight
+              position={[-100, 120, -50]}
+              intensity={0.7}
+            />
+
+            <Suspense
+              fallback={
+                <Html center>
+                  <span className="mesh3d__loading">
+                    Loading scientific segmentation…
+                  </span>
+                </Html>
+              }
+            >
+              <group
+                position={[-centre[0], -centre[1], -centre[2]]}
+              >
+                {showSegmentation && (
+                  <SegmentationSurface
+                    url={meshUrl}
+                    opacity={segmentationOpacity}
+                    layer={predictionLayer}
+                    emphasis={predictionEmphasis}
+                    treatment={surfaceTreatment}
+                    onSurfaceStatus={setSurfaceStatus}
+                  />
+                )}
+
+                {removalActive && (
+                  <RemovedRefinementSurface
+                    key={removalUrl}
+                    url={removalUrl}
+                    onLoadState={setRemovalStatus}
+                  />
+                )}
+
+                {showAnatomy && (
+                  <AnatomySurface
+                    url={anatomyUrl}
+                    opacity={anatomyOpacity}
+                  />
+                )}
+
+                {plane !== 'none' && (
+                  <MRIPlaneTexture3D
+                    caseId={caseId}
+                    modality={modality}
+                    plane={plane}
+                    index={indices[plane]}
+                    metadata={metadata}
+                    opacity={planeOpacity}
+                    transparentBackground={transparentMRIBackground}
+                  />
+                )}
+              </group>
+            </Suspense>
+
+            <AnatomicalCameraControls
+              ref={cameraRef}
+              frame={cameraFrame}
+              onViewChange={setCameraView}
+            />
+          </Canvas>
+        </MeshErrorBoundary>
+        <div className="mesh3d__camera-status" role="status" aria-live="polite">
+          {cameraStatus}
+        </div>
+        {activeView && !cameraView.moving && (
+          <div className="mesh3d__orientation" aria-label={`Screen orientation: top ${ANATOMICAL_LABELS[activeView.edges[0]]}, bottom ${ANATOMICAL_LABELS[activeView.edges[1]]}, left ${ANATOMICAL_LABELS[activeView.edges[2]]}, right ${ANATOMICAL_LABELS[activeView.edges[3]]}`}>
+            {(['top', 'bottom', 'left', 'right'] as const).map((edge, index) => (
+              <span
+                key={edge}
+                className={`mesh3d__orientation-${edge}`}
+                title={ANATOMICAL_LABELS[activeView.edges[index]]}
+              >
+                {activeView.edges[index]}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mesh3d__footer">
+        <span>Drag to rotate · Scroll to zoom</span>
+        <span>
+          MRI: {modality.toUpperCase()} ·
+          {plane === 'none'
+            ? ' No slice'
+            : ` ${plane} ${indices[plane]}`}
+        </span>
+        <span>RAS+ millimetres · Research only</span>
+      </div>
+
+      <details className="mesh3d__advanced">
+        <summary>
+          <strong>Advanced 3D controls</strong>
+          <span>
+            Geometry · prediction comparison · opacity · MRI planes
+          </span>
+        </summary>
+        <div className="mesh3d__advanced-body">
       <div
         className="mesh3d__surface-treatment"
         role="group"
@@ -449,18 +605,7 @@ export function MeshViewer3D({
           type="button"
           aria-pressed={removalActive}
           disabled={!removalEligible}
-          onClick={() => {
-            setPredictionLayer('final')
-            setPredictionEmphasis(true)
-            setShowSegmentation(true)
-            setSegmentationOpacity(1)
-            setShowAnatomy(true)
-            setAnatomyOpacity(0.12)
-            setPlane('none')
-            setFitMode('anatomy')
-            setRemovalStatus('idle')
-            setShowRemoved(true)
-          }}
+          onClick={inspectRefinementEvidence}
         >
           Final + removed
         </button>
@@ -698,126 +843,9 @@ export function MeshViewer3D({
             : 'Foreground bounds from T1N · Display-only framing'}
         </small>
       </div>
-
-      <div className="mesh3d__canvas">
-        <MeshErrorBoundary key={`${caseId}:${runId}`}>
-          <Canvas
-            frameloop="demand"
-            dpr={[1, 1.5]}
-            gl={{
-              antialias: true,
-              alpha: false,
-              powerPreference: 'low-power',
-            }}
-            camera={{
-              position: [128, -157, 125],
-              fov: 43,
-              near: 0.1,
-              far: 1000,
-            }}
-            onCreated={({ camera }) => camera.up.set(0, 0, 1)}
-          >
-            <color attach="background" args={['#0b1420']} />
-
-            <ambientLight intensity={1.3} />
-
-            <directionalLight
-              position={[100, -80, 160]}
-              intensity={2.5}
-            />
-
-            <directionalLight
-              position={[-100, 120, -50]}
-              intensity={0.7}
-            />
-
-            <Suspense
-              fallback={
-                <Html center>
-                  <span className="mesh3d__loading">
-                    Loading scientific segmentation…
-                  </span>
-                </Html>
-              }
-            >
-              <group
-                position={[-centre[0], -centre[1], -centre[2]]}
-              >
-                {showSegmentation && (
-                  <SegmentationSurface
-                    url={meshUrl}
-                    opacity={segmentationOpacity}
-                    layer={predictionLayer}
-                    emphasis={predictionEmphasis}
-                    treatment={surfaceTreatment}
-                    onSurfaceStatus={setSurfaceStatus}
-                  />
-                )}
-
-                {removalActive && (
-                  <RemovedRefinementSurface
-                    key={removalUrl}
-                    url={removalUrl}
-                    onLoadState={setRemovalStatus}
-                  />
-                )}
-
-                {showAnatomy && (
-                  <AnatomySurface
-                    url={anatomyUrl}
-                    opacity={anatomyOpacity}
-                  />
-                )}
-
-                {plane !== 'none' && (
-                  <MRIPlaneTexture3D
-                    caseId={caseId}
-                    modality={modality}
-                    plane={plane}
-                    index={indices[plane]}
-                    metadata={metadata}
-                    opacity={planeOpacity}
-                    transparentBackground={transparentMRIBackground}
-                  />
-                )}
-              </group>
-            </Suspense>
-
-            <AnatomicalCameraControls
-              ref={cameraRef}
-              frame={cameraFrame}
-              onViewChange={setCameraView}
-            />
-          </Canvas>
-        </MeshErrorBoundary>
-        <div className="mesh3d__camera-status" role="status" aria-live="polite">
-          {cameraStatus}
         </div>
-        {activeView && !cameraView.moving && (
-          <div className="mesh3d__orientation" aria-label={`Screen orientation: top ${ANATOMICAL_LABELS[activeView.edges[0]]}, bottom ${ANATOMICAL_LABELS[activeView.edges[1]]}, left ${ANATOMICAL_LABELS[activeView.edges[2]]}, right ${ANATOMICAL_LABELS[activeView.edges[3]]}`}>
-            {(['top', 'bottom', 'left', 'right'] as const).map((edge, index) => (
-              <span
-                key={edge}
-                className={`mesh3d__orientation-${edge}`}
-                title={ANATOMICAL_LABELS[activeView.edges[index]]}
-              >
-                {activeView.edges[index]}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+      </details>
 
-      <div className="mesh3d__footer">
-        <span>Drag to rotate · Scroll to zoom</span>
-        <span>
-          MRI: {modality.toUpperCase()} ·
-          {plane === 'none'
-            ? ' No slice'
-            : ` ${plane} ${indices[plane]}`}
-        </span>
-        <span>RAS+ millimetres · Research only</span>
-      </div>
     </section>
   )
 }
