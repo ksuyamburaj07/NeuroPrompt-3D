@@ -1,6 +1,10 @@
-import { useState, type ChangeEvent, type DragEvent } from 'react'
+import { lazy, Suspense, useState, type ChangeEvent, type DragEvent } from 'react'
 import './PreparePage.css'
-import { ProcessPage } from './ProcessPage'
+const ProcessPage = lazy(
+  () => import('./ProcessPage').then(
+    ({ ProcessPage }) => ({ default: ProcessPage }),
+  ),
+)
 import { createRun, getRun } from '../api/runs'
 import {
   clearRunRecovery,
@@ -259,15 +263,23 @@ export function PreparePage() {
 
   if (processCaseId) {
     return (
-      <ProcessPage
-        caseId={processCaseId}
-        existingRunId={existingRunId}
-        onRunCreated={setExistingRunId}
-        onBack={() => {
-          setProcessCaseId(null)
-          setSavedRun(readRunRecovery())
-        }}
-      />
+      <Suspense
+        fallback={
+          <main className="prepare" role="status">
+            Opening the MRI imaging workspace…
+          </main>
+        }
+      >
+        <ProcessPage
+          caseId={processCaseId}
+          existingRunId={existingRunId}
+          onRunCreated={setExistingRunId}
+          onBack={() => {
+            setProcessCaseId(null)
+            setSavedRun(readRunRecovery())
+          }}
+        />
+      </Suspense>
     )
   }
 

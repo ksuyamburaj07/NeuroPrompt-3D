@@ -440,8 +440,8 @@ function InferencePanel({
             <span className="process__eyebrow">03 / EXPLORE</span>
             <h3>Your scientific outputs are ready.</h3>
             <p>
-              The immersive NIfTI viewer is our next frontend milestone.
-              For now, verified backend artifacts can be retrieved below.
+              Inspect MRI slices and 3D predictions in the imaging workspace.
+              Retrieve verified scientific artifacts below.
             </p>
           </div>
 
