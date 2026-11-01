@@ -1,4 +1,6 @@
+
 from pathlib import Path
+from hashlib import sha256
 
 import nibabel as nib
 import numpy as np
@@ -132,12 +134,26 @@ def test_validate_stage_get_and_delete_case(
     assert case_root.is_dir()
     assert (case_root / "case.json").is_file()
 
+    staged_t1n = (
+        case_root / "modalities" / "t1n.nii.gz"
+    )
+
+    expected_sha256 = sha256(
+        staged_t1n.read_bytes()
+    ).hexdigest()
+
+    assert payload["source_t1n_sha256"] == expected_sha256
     get_response = client.get(
         f"/api/v1/cases/{case_id}"
     )
 
     assert get_response.status_code == 200
     assert get_response.json()["case_id"] == case_id
+
+    assert (
+        get_response.json()["source_t1n_sha256"]
+        == expected_sha256
+    )
 
     delete_response = client.delete(
         f"/api/v1/cases/{case_id}"

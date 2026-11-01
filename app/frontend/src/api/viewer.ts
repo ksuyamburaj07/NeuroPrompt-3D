@@ -1,6 +1,6 @@
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL ||
-  'http://127.0.0.1:8000/api/v1'
+  (import.meta.env.DEV ? 'http://127.0.0.1:8000/api/v1' : '/api/v1')
 ).replace(/\/+$/, '')
 
 export type MRIPlane = 'axial' | 'coronal' | 'sagittal'
@@ -180,5 +180,89 @@ export function viewerAnatomyUrl(
   return (
     `${API_BASE}/cases/${encodeURIComponent(caseId)}` +
     `/viewer/anatomy/brain?step=${step}&finish=${finish}`
+  )
+}
+
+/* M11E6B7D — Registered cortical reconstruction */
+
+export type CortexStatus = {
+  case_id: string
+  available: boolean
+  reason: string
+  reconstruction_id: string | null
+  coordinate_convention: string
+  units: string
+  qc: {
+    status: 'provisional' | 'approved' | 'rejected'
+    scope: 'research'
+    clinically_validated: false
+    notes: string
+  } | null
+}
+
+export async function getViewerCortexStatus(
+  caseId: string,
+): Promise<CortexStatus> {
+  let response: Response
+
+  try {
+    response = await fetch(
+      `${API_BASE}/cases/${encodeURIComponent(caseId)}` +
+      `/viewer/cortex/status`,
+      { cache: 'no-store' },
+    )
+  } catch {
+    throw new Error(
+      'Cannot contact the cortical reconstruction backend.',
+    )
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Unable to check cortical reconstruction ` +
+      `(HTTP ${response.status}).`,
+    )
+  }
+
+  const payload: unknown = await response.json()
+
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !('case_id' in payload) ||
+    payload.case_id !== caseId ||
+    !('available' in payload) ||
+    typeof payload.available !== 'boolean' ||
+    !('reason' in payload) ||
+    typeof payload.reason !== 'string'
+  ) {
+    throw new Error(
+      'Invalid cortical reconstruction status response.',
+    )
+  }
+
+  return payload as CortexStatus
+}
+
+export function viewerCortexMeshUrl(
+  caseId: string,
+  hemisphere: 'lh' | 'rh',
+): string {
+  return (
+    `${API_BASE}/cases/${encodeURIComponent(caseId)}` +
+    `/viewer/cortex/${hemisphere}`
+  )
+}
+
+
+// M11E6B7G4 — Approved case-bound pial contour overlay
+export function viewerCortexContourUrl(
+  caseId: string,
+  plane: MRIPlane,
+  index: number,
+): string {
+  return (
+    `${API_BASE}/cases/${encodeURIComponent(caseId)}` +
+    `/viewer/cortex/contours/${plane}/${index}`
   )
 }

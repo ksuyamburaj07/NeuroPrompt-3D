@@ -2,6 +2,7 @@ export type AppMode =
   | 'new-case'
   | 'final-test'
   | 'research'
+  | 'cortical-qc'
 
 type AppHeaderProps = {
   activeMode: AppMode
@@ -23,6 +24,10 @@ const navigation: Array<{
   {
     id: 'research',
     label: 'Research',
+  },
+  {
+    id: 'cortical-qc',
+    label: 'Cortical QC',
   },
 ]
 

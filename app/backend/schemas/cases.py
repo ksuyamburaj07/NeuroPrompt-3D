@@ -45,6 +45,11 @@ class CaseValidationResponse(BaseModel):
 
     ready_for_inference: bool
 
+    source_t1n_sha256: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+    )
+
     errors: list[ValidationIssue] = Field(default_factory=list)
 
 

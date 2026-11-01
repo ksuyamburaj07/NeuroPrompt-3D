@@ -11,6 +11,13 @@ RUNTIME_ROOT = BACKEND_ROOT / "runtime"
 LIVE_CASES_ROOT = RUNTIME_ROOT / "live_cases"
 LIVE_RUNS_ROOT = RUNTIME_ROOT / "live_runs"
 
+# An empty override disables optional, externally stored cortical assets.
+_cortex_registry = os.environ.get(
+    "NEUROPROMPT_CORTEX_REGISTRY",
+    str(PROJECT_ROOT / "configs" / "cortex_registry.json"),
+)
+CORTEX_REGISTRY_PATH = Path(_cortex_registry) if _cortex_registry else None
+
 FROZEN_M9E_ROOT = PROJECT_ROOT / "archives" / "M9E"
 FROZEN_M10_ROOT = PROJECT_ROOT / "archives" / "M10"
 

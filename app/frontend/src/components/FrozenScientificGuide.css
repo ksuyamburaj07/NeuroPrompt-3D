@@ -1,0 +1,161 @@
+/* M11E12E13: Frozen scientific interpretation. */
+
+.frozen-science-guide,
+.frozen-overlay-legend,
+.frozen-position-readout {
+  margin: 14px 0;
+  padding: 13px 15px;
+  border: 1px solid var(--border, #365665);
+  border-radius: 9px;
+  background: #0b1c26;
+  color: inherit;
+}
+
+.frozen-science-guide summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.frozen-science-guide summary:focus-visible {
+  outline: 2px solid #64d8e4;
+  outline-offset: 4px;
+}
+
+.frozen-science-guide__content {
+  margin-top: 12px;
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.frozen-science-guide__content dl {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 210px), 1fr)
+  );
+  gap: 10px;
+}
+
+.frozen-science-guide__content dl > div {
+  padding: 10px;
+  border: 1px solid var(--border, #365665);
+  border-radius: 6px;
+}
+
+.frozen-science-guide__content dt {
+  font-weight: 600;
+}
+
+.frozen-science-guide__content dd {
+  margin: 5px 0 0;
+  color: #b6ceda;
+}
+
+.frozen-overlay-legend__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+.frozen-overlay-legend__heading span,
+.frozen-overlay-legend__note,
+.frozen-position-readout p {
+  color: #b6ceda;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.frozen-overlay-legend__items {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 210px), 1fr)
+  );
+  gap: 7px;
+  padding: 0;
+  margin: 11px 0;
+  list-style: none;
+}
+
+.frozen-overlay-legend__items li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.frozen-overlay-legend__items li[data-selected="true"] {
+  border-color: #58c9c7;
+  background: #142a36;
+}
+
+.frozen-overlay-legend__items li > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.frozen-overlay-legend__items small {
+  color: #b6ceda;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.frozen-overlay-legend__swatch {
+  display: inline-block;
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  border: 1px solid #627788;
+  border-radius: 4px;
+}
+
+.frozen-overlay-legend__swatch--baseline {
+  background: rgba(30, 200, 190, 0.51);
+}
+
+.frozen-overlay-legend__swatch--final {
+  background: rgba(176, 125, 250, 0.51);
+}
+
+.frozen-overlay-legend__swatch--removed {
+  background: rgba(255, 155, 45, 0.69);
+}
+
+.frozen-overlay-legend__swatch--support {
+  background: rgba(70, 145, 255, 0.35);
+}
+
+.frozen-position-readout {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 190px), 1fr)
+  );
+  gap: 8px 18px;
+}
+
+.frozen-position-readout > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.frozen-position-readout > div span {
+  color: #b6ceda;
+  font-size: 12px;
+}
+
+.frozen-position-readout > div strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.frozen-position-readout p {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+}

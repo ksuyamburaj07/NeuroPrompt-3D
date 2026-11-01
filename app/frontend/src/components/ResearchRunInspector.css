@@ -1,0 +1,148 @@
+
+.research-run-inspector {
+  min-width: 0;
+}
+
+.research-run-inspector__introduction,
+.research-run-inspector__message,
+.research-run-inspector__boundary {
+  color: #b6ceda;
+  line-height: 1.55;
+}
+
+.research-run-inspector__form {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.research-run-inspector__form-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.research-run-inspector__form-row input {
+  flex: 1 1 300px;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #436575;
+  border-radius: 7px;
+  background: #102430;
+  color: #f1f7fa;
+  font: inherit;
+}
+
+.research-run-inspector__form-row button {
+  padding: 11px 15px;
+  border: 1px solid #4c8695;
+  border-radius: 7px;
+  background: #183746;
+  color: #f1f7fa;
+  font: inherit;
+  cursor: pointer;
+}
+
+.research-run-inspector__form-row button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.research-run-inspector__form-row :focus-visible {
+  outline: 2px solid #62d8df;
+  outline-offset: 3px;
+}
+
+.research-run-inspector__form > p {
+  margin: 0;
+  font-size: 12px;
+  color: #b6ceda;
+}
+
+.research-run-inspector__error {
+  padding: 12px;
+  border: 1px solid #9d5556;
+  border-radius: 7px;
+  color: #f1b2b1;
+  overflow-wrap: anywhere;
+}
+
+.research-run-inspector__result {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #365665;
+  border-radius: 9px;
+  background: #0b1c26;
+  min-width: 0;
+}
+
+.research-run-inspector__result-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
+}
+
+.research-run-inspector__result-heading span {
+  border: 1px solid #4c7181;
+  border-radius: 5px;
+  padding: 4px 8px;
+  text-transform: capitalize;
+}
+
+.research-run-inspector__result progress {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  accent-color: #55c9c9;
+}
+
+.research-run-inspector__fields {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 230px), 1fr)
+  );
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.research-run-inspector__field {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #35505e;
+  border-radius: 7px;
+}
+
+.research-run-inspector__field dt {
+  margin-bottom: 5px;
+  color: #b6ceda;
+  font-size: 12px;
+}
+
+.research-run-inspector__field dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.research-run-inspector__artifacts {
+  margin-top: 16px;
+}
+
+.research-run-inspector__artifacts code,
+.research-run-inspector__boundary {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .research-run-inspector__form-row button {
+    width: 100%;
+  }
+}

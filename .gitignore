@@ -20,6 +20,7 @@ checkpoints/
 *.mha
 *.mhd
 *.nrrd
+*.ply
 *.pt
 *.pth
 *.ckpt
@@ -49,3 +50,6 @@ imports/**
 # M11 live application runtime
 app/backend/runtime/*
 !app/backend/runtime/.gitkeep
+
+# Local research-workstation cortex asset paths
+/configs/cortex_registry.json

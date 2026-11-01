@@ -3,6 +3,9 @@ import {
   getViewerMetadata,
   viewerSliceUrl,
   viewerOverlayUrl,
+  getViewerCortexStatus,
+  viewerCortexContourUrl,
+  type CortexStatus,
   getViewerRunMarkers,
   type ViewerRunMarkers,
   type ViewerSpatialMarker,
@@ -97,6 +100,7 @@ function SlicePane({
   completedRunId,
   overlayLayer,
   overlayOpacity,
+  cortexContoursEnabled,
   markers,
   onIndexChange,
 }: {
@@ -108,11 +112,13 @@ function SlicePane({
   completedRunId: string | null
   overlayLayer: MRIOverlayLayer | 'none'
   overlayOpacity: number
+  cortexContoursEnabled: boolean
   markers: ViewerRunMarkers | null
   onIndexChange: (plane: MRIPlane, index: number) => void
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
   const [failedOverlayUrl, setFailedOverlayUrl] = useState<string | null>(null)
+  const [failedCortexUrl, setFailedCortexUrl] = useState<string | null>(null)
 
   const info = metadata.planes[plane]
   const index = indices[plane]
@@ -126,6 +132,10 @@ function SlicePane({
           caseId, completedRunId, overlayLayer, plane, index,
         )
       : null
+
+  const cortexUrl = cortexContoursEnabled
+    ? viewerCortexContourUrl(caseId, plane, index)
+    : null
 
   const horizontal = plane === 'sagittal'
     ? percentage(indices.coronal, sizeY)
@@ -200,6 +210,30 @@ function SlicePane({
             )
           )}
 
+          {cortexUrl && failedUrl !== url && (
+            failedCortexUrl === cortexUrl ? (
+              <div className="mri-viewer__overlay-error" role="status">
+                Pial boundaries unavailable
+                <button
+                  type="button"
+                  onClick={() => setFailedCortexUrl(null)}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <img
+                key={cortexUrl}
+                className="mri-viewer__overlay mri-viewer__cortex-contours"
+                src={cortexUrl}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                onError={() => setFailedCortexUrl(cortexUrl)}
+              />
+            )
+          )}
+
           {markers && (
             <>
               <ScientificMarker
@@ -268,6 +302,9 @@ export function MRIViewer({
   const [overlayLayer, setOverlayLayer] =
     useState<MRIOverlayLayer | 'none'>('final')
   const [overlayOpacity, setOverlayOpacity] = useState(45)
+  const [cortexStatus, setCortexStatus] = useState<CortexStatus | null>(null)
+  const [controlsContainer, setControlsContainer] = useState<HTMLDivElement | null>(null)
+  const [cortexEnabledForCase, setCortexEnabledForCase] = useState<string | null>(null)
   const [markerResult, setMarkerResult] =
     useState<ViewerRunMarkers | null>(null)
   const [markerFailure, setMarkerFailure] =
@@ -308,6 +345,29 @@ export function MRIViewer({
     }
   }, [caseId])
 
+
+  useEffect(() => {
+    let active = true
+
+    getViewerCortexStatus(caseId)
+      .then((result) => {
+        if (active) setCortexStatus(result)
+      })
+      .catch(() => {
+        if (active) setCortexStatus(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [caseId])
+
+  const cortexAvailable =
+    cortexStatus?.case_id === caseId &&
+    cortexStatus.available === true
+
+  const cortexContoursEnabled =
+    cortexAvailable && cortexEnabledForCase === caseId
 
   useEffect(() => {
     if (!completedRunId) return
@@ -406,6 +466,23 @@ export function MRIViewer({
 
       {metadata && (
         <div className="mri-viewer__overlay-controls">
+          {cortexAvailable && (
+            <label className="mri-viewer__cortex-toggle">
+              <input
+                type="checkbox"
+                checked={cortexContoursEnabled}
+                onChange={(event) => {
+                  setCortexEnabledForCase(
+                    event.target.checked ? caseId : null
+                  )
+                }}
+              />
+              <span>
+                Pial boundaries
+                <small>Gold LH · Cyan RH · research only</small>
+              </span>
+            </label>
+          )}
           <label htmlFor="mri-overlay-layer">
             Segmentation
             <select
@@ -513,17 +590,6 @@ export function MRIViewer({
         </section>
       )}
 
-      {metadata && completedRunId && (
-        <MeshViewer3D
-          caseId={caseId}
-          runId={completedRunId}
-          modality={modality}
-          metadata={metadata}
-          indices={indices}
-          markers={displayedMarkers}
-        />
-      )}
-
       {loadError ? (
         <div className="mri-viewer__message" role="alert">
           {loadError}
@@ -548,23 +614,81 @@ export function MRIViewer({
             </span>
           </div>
 
-          <div className="mri-viewer__planes">
+          <div
+            className={
+              completedRunId
+                ? 'mri-viewer__stage mri-viewer__stage--with-3d'
+                : 'mri-viewer__stage'
+            }
+            aria-label="Four-view MRI research workstation"
+          >
+            {completedRunId && (
+              <div className="mri-viewer__stage-hero">
+                <MeshViewer3D
+                  caseId={caseId}
+                  runId={completedRunId}
+                  modality={modality}
+                  metadata={metadata}
+                  indices={indices}
+                  markers={displayedMarkers}
+                  controlsContainer={controlsContainer}
+                />
+              </div>
+            )}
+
             {planes.map((plane) => (
-              <SlicePane
+              <div
                 key={plane}
-                caseId={caseId}
-                modality={modality}
-                plane={plane}
-                metadata={metadata}
-                indices={indices}
-                completedRunId={completedRunId}
-                overlayLayer={overlayLayer}
-                overlayOpacity={overlayOpacity}
-                markers={displayedMarkers}
-                onIndexChange={changeIndex}
-              />
+                className={`mri-viewer__stage-slot mri-viewer__stage-slot--${plane}`}
+              >
+                <SlicePane
+                  caseId={caseId}
+                  modality={modality}
+                  plane={plane}
+                  metadata={metadata}
+                  indices={indices}
+                  completedRunId={completedRunId}
+                  overlayLayer={overlayLayer}
+                  overlayOpacity={overlayOpacity}
+                  cortexContoursEnabled={cortexContoursEnabled}
+                  markers={displayedMarkers}
+                  onIndexChange={changeIndex}
+                />
+              </div>
             ))}
+
+            {completedRunId && (
+              <aside
+                className="mri-viewer__stage-context"
+                aria-label="Research visualization guidance"
+              >
+                <span className="mri-viewer__stage-kicker">
+                  SPATIAL INSPECTION
+                </span>
+                <strong>One case · Four perspectives</strong>
+                <p>
+                  Inspect axial, coronal and sagittal MRI slices
+                  alongside the interactive 3D reconstruction.
+                </p>
+                <p>
+                  Slice positions share the same MRI coordinates.
+                  The 3D camera is independently navigable.
+                </p>
+                <p className="mri-viewer__stage-caution">
+                  Research-only visualization. Cortical surfaces
+                  require source identity and QC eligibility.
+                </p>
+              </aside>
+            )}
           </div>
+
+          {completedRunId && (
+            <div
+              ref={setControlsContainer}
+              className="mri-viewer__workspace-controls"
+              aria-label="Full-width 3D research controls"
+            />
+          )}
 
           <footer className="mri-viewer__footer">
             Source: validated staged MRI · Percentile-scaled grayscale

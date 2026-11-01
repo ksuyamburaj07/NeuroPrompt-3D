@@ -152,9 +152,9 @@ function InferencePanel({
     try {
       const latest = await getRun(runId)
 
-      if (latest.case_id !== caseId) {
+      if (latest.case_id !== caseId || latest.run_id !== runId) {
         throw new Error(
-          'The server returned a run associated with another case.',
+          'The server returned a different case or run identity.',
         )
       }
 
@@ -190,6 +190,12 @@ function InferencePanel({
         const latest = await getRun(runId!)
 
         if (stopped) return
+
+        if (latest.case_id !== caseId || latest.run_id !== runId) {
+          throw new Error(
+            'Run identity mismatch. Refusing to display another case or run.',
+          )
+        }
 
         acceptRun(latest)
         setConnectionError(null)
@@ -228,7 +234,7 @@ function InferencePanel({
       stopped = true
       clearTimeout(timer)
     }
-  }, [phase, runId, acceptRun])
+  }, [phase, runId, caseId, acceptRun])
 
   const backDisabled =
     phase === 'creating' ||

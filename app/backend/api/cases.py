@@ -357,3 +357,90 @@ def get_case_viewer_anatomy(
             "X-Mesh-Finish": finish,
         },
     )
+
+
+@router.get(
+    "/cases/{case_id}/viewer/cortex/contours/{plane}/{index}"
+)
+def get_case_viewer_cortex_contours(
+    case_id: str,
+    plane: str,
+    index: int,
+) -> Response:
+    """Render eligible, case-bound pial intersections over MRI slices."""
+    from app.backend.services.viewer_cortex_contour_service import (
+        viewer_cortex_contours_png,
+    )
+
+    try:
+        image_bytes = viewer_cortex_contours_png(
+            case_id,
+            plane,
+            index,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Staged case or eligible cortical "
+                "reconstruction unavailable."
+            ),
+        ) from exc
+
+    return Response(
+        content=image_bytes,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "X-Contour-Source": "registered-pial-reconstruction",
+            "X-Contour-Coordinates": "canonical-RAS-voxel",
+        },
+    )
+
+
+@router.get("/cases/{case_id}/viewer/cortex/status")
+def get_case_viewer_cortex_status(case_id: str, response: Response) -> dict:
+    from app.backend.services.viewer_cortex_service import viewer_cortex_status
+
+    try:
+        status = viewer_cortex_status(case_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail="Staged MRI case not found."
+        ) from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    return status
+
+
+@router.get("/cases/{case_id}/viewer/cortex/{hemisphere}")
+def get_case_viewer_cortex(case_id: str, hemisphere: str) -> Response:
+    from app.backend.services.viewer_cortex_service import viewer_cortex_ply
+
+    try:
+        mesh_bytes = viewer_cortex_ply(case_id, hemisphere)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Staged case or eligible cortical reconstruction unavailable.",
+        ) from exc
+
+    return Response(
+        content=mesh_bytes,
+        media_type="application/octet-stream",
+        headers={
+            "Cache-Control": "no-store",
+            "X-Mesh-Coordinates": "RAS+ millimetres",
+            "X-Mesh-Source": "registered-cortical-reconstruction",
+        },
+    )

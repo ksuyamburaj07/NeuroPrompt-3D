@@ -1,0 +1,74 @@
+.frozen-comparison {
+  background: #03090e;
+  border: 1px solid #284653;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.frozen-comparison__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.frozen-comparison__heading > span,
+.frozen-comparison > p,
+.frozen-comparison__panel > span {
+  color: #a9c3ce;
+  font-size: 13px;
+}
+
+.frozen-comparison__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.frozen-comparison__panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 6px;
+  background: #08131b;
+  border: 1px solid #213943;
+  border-radius: 8px;
+}
+
+.frozen-comparison__image-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+}
+
+.frozen-comparison__image-row img {
+  display: block;
+  width: min(100%, 300px);
+  height: auto;
+  aspect-ratio: 182 / 218;
+  object-fit: contain;
+  background: #000;
+}
+
+.frozen-comparison__image-row > span,
+.frozen-comparison__orientation {
+  color: #a4cfda;
+  font-size: 12px;
+}
+
+.frozen-comparison__note {
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .frozen-comparison__grid {
+    grid-template-columns: 1fr;
+  }
+}

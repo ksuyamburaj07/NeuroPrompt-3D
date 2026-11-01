@@ -13,14 +13,19 @@ import {
   type ReactNode,
 } from 'react'
 
+import { createPortal } from 'react-dom'
 import { Canvas, useLoader } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { DoubleSide } from 'three'
 import { PLYLoader } from 'three/addons/loaders/PLYLoader.js'
+import { CorticalSurface3D } from './CorticalSurface3D'
 
 import {
   viewerMeshUrl,
   viewerAnatomyUrl,
+  getViewerCortexStatus,
+  viewerCortexMeshUrl,
+  type CortexStatus,
   type MRIPlane,
   type MRIModality,
   type MRIViewerMetadata,
@@ -193,6 +198,25 @@ function AnatomySurface({
   )
 }
 
+class CortexLoadBoundary extends Component<
+  { children: ReactNode; onError: () => void },
+  { failed: boolean }
+> {
+  state = { failed: false }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  componentDidCatch() {
+    this.props.onError()
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children
+  }
+}
+
 export function MeshViewer3D({
   caseId,
   runId,
@@ -200,7 +224,11 @@ export function MeshViewer3D({
   metadata,
   indices,
   markers,
-}: Props & { markers?: ViewerRunMarkers | null }) {
+  controlsContainer,
+}: Props & {
+  markers?: ViewerRunMarkers | null
+  controlsContainer?: HTMLElement | null
+}) {
   const cameraRef = useRef<AnatomicalCameraHandle>(null)
   const [cameraView, setCameraView] = useState<CameraViewState>({
     view: 'home', moving: false,
@@ -236,6 +264,78 @@ export function MeshViewer3D({
   const [showRemoved, setShowRemoved] = useState(false)
   const [removalStatus, setRemovalStatus] =
     useState<RemovalLoadState>('idle')
+
+  const [cortexRequestedFor, setCortexRequestedFor] =
+    useState<string | null>(null)
+
+  const [cortexFailedFor, setCortexFailedFor] =
+    useState<string | null>(null)
+
+  const [showLeftCortex, setShowLeftCortex] = useState(true)
+  const [showRightCortex, setShowRightCortex] = useState(true)
+  const [cortexOpacity, setCortexOpacity] = useState(0.80)
+
+  const [cortexLookup, setCortexLookup] = useState<{
+    caseId: string
+    status: CortexStatus | null
+    error: boolean
+  } | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    getViewerCortexStatus(caseId).then(
+      (status) => {
+        if (active) {
+          setCortexLookup({
+            caseId,
+            status,
+            error: false,
+          })
+        }
+      },
+      () => {
+        if (active) {
+          setCortexLookup({
+            caseId,
+            status: null,
+            error: true,
+          })
+        }
+      },
+    )
+
+    return () => {
+      active = false
+    }
+  }, [caseId])
+
+  const cortexCheck =
+    cortexLookup?.caseId === caseId
+      ? cortexLookup
+      : null
+
+  const cortexMessage = !cortexCheck
+    ? 'Checking cortical reconstruction availability…'
+    : cortexCheck.error
+      ? 'Status unavailable; standard MRI viewer remains active.'
+      : cortexCheck.status?.available
+        ? 'Registered reconstruction available for research display; not clinically validated.'
+        : cortexCheck.status?.reason === 'qc_not_approved'
+          ? 'Reconstruction found; research QC approval pending.'
+          : cortexCheck.status?.reason === 'source_identity_mismatch'
+            ? 'Cortical access blocked: MRI source identity changed.'
+            : cortexCheck.status?.reason === 'source_unavailable'
+              ? 'No validation-time source identity; cortical access unavailable.'
+              : `Not available: ${cortexCheck.status?.reason ?? 'unknown'}`
+
+  const cortexAvailable =
+    cortexCheck?.status?.available === true
+
+  const cortexEnabled =
+    cortexAvailable &&
+    cortexRequestedFor === caseId &&
+    cortexFailedFor !== caseId
 
   // Full MRI planes always use full-volume framing.
   const effectiveFit: CameraFitMode =
@@ -288,6 +388,11 @@ export function MeshViewer3D({
     setShowRemoved(true)
   }
 
+  const placeControls = (content: ReactNode) =>
+    controlsContainer
+      ? createPortal(content, controlsContainer)
+      : content
+
   return (
     <section
       className="mesh3d"
@@ -313,6 +418,154 @@ export function MeshViewer3D({
         </button>
       </div>
 
+      <div className="mesh3d__canvas">
+        <MeshErrorBoundary key={`${caseId}:${runId}`}>
+          <Canvas
+            frameloop="demand"
+            dpr={[1, 1.5]}
+            gl={{
+              antialias: true,
+              alpha: false,
+              powerPreference: 'low-power',
+            }}
+            camera={{
+              position: [128, -157, 125],
+              fov: 43,
+              near: 0.1,
+              far: 1000,
+            }}
+            onCreated={({ camera }) => camera.up.set(0, 0, 1)}
+          >
+            <color attach="background" args={['#0b1420']} />
+
+            <ambientLight intensity={1.3} />
+
+            <directionalLight
+              position={[100, -80, 160]}
+              intensity={2.5}
+            />
+
+            <directionalLight
+              position={[-100, 120, -50]}
+              intensity={0.7}
+            />
+
+            <Suspense
+              fallback={
+                <Html center>
+                  <span className="mesh3d__loading">
+                    Loading scientific segmentation…
+                  </span>
+                </Html>
+              }
+            >
+              <group
+                position={[-centre[0], -centre[1], -centre[2]]}
+              >
+                {showSegmentation && (
+                  <SegmentationSurface
+                    url={meshUrl}
+                    opacity={segmentationOpacity}
+                    layer={predictionLayer}
+                    emphasis={predictionEmphasis}
+                    treatment={surfaceTreatment}
+                    onSurfaceStatus={setSurfaceStatus}
+                  />
+                )}
+
+                {removalActive && (
+                  <RemovedRefinementSurface
+                    key={removalUrl}
+                    url={removalUrl}
+                    onLoadState={setRemovalStatus}
+                  />
+                )}
+
+                {showAnatomy && (
+                  <AnatomySurface
+                    url={anatomyUrl}
+                    opacity={anatomyOpacity}
+                  />
+                )}
+
+
+                {cortexEnabled && (
+                  <CortexLoadBoundary
+                    key={caseId}
+                    onError={() => setCortexFailedFor(caseId)}
+                  >
+                    <Suspense fallback={null}>
+                      {showLeftCortex && (
+                        <CorticalSurface3D
+                          url={viewerCortexMeshUrl(caseId, 'lh')}
+                          hemisphere="lh"
+                          opacity={cortexOpacity}
+                        />
+                      )}
+
+                      {showRightCortex && (
+                        <CorticalSurface3D
+                          url={viewerCortexMeshUrl(caseId, 'rh')}
+                          hemisphere="rh"
+                          opacity={cortexOpacity}
+                        />
+                      )}
+                    </Suspense>
+                  </CortexLoadBoundary>
+                )}
+
+                {plane !== 'none' && (
+                  <MRIPlaneTexture3D
+                    caseId={caseId}
+                    modality={modality}
+                    plane={plane}
+                    index={indices[plane]}
+                    metadata={metadata}
+                    opacity={planeOpacity}
+                    transparentBackground={transparentMRIBackground}
+                  />
+                )}
+              </group>
+            </Suspense>
+
+            <AnatomicalCameraControls
+              ref={cameraRef}
+              frame={cameraFrame}
+              onViewChange={setCameraView}
+            />
+          </Canvas>
+        </MeshErrorBoundary>
+        <div className="mesh3d__camera-status" role="status" aria-live="polite">
+          {cameraStatus}
+        </div>
+        {activeView && !cameraView.moving && (
+          <div className="mesh3d__orientation" aria-label={`Screen orientation: top ${ANATOMICAL_LABELS[activeView.edges[0]]}, bottom ${ANATOMICAL_LABELS[activeView.edges[1]]}, left ${ANATOMICAL_LABELS[activeView.edges[2]]}, right ${ANATOMICAL_LABELS[activeView.edges[3]]}`}>
+            {(['top', 'bottom', 'left', 'right'] as const).map((edge, index) => (
+              <span
+                key={edge}
+                className={`mesh3d__orientation-${edge}`}
+                title={ANATOMICAL_LABELS[activeView.edges[index]]}
+              >
+                {activeView.edges[index]}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mesh3d__footer">
+        <span>Drag to rotate · Scroll to zoom</span>
+        <span>
+          MRI: {modality.toUpperCase()} ·
+          {plane === 'none'
+            ? ' No slice'
+            : ` ${plane} ${indices[plane]}`}
+        </span>
+        <span>RAS+ millimetres · Research only</span>
+      </div>
+
+      {placeControls(
+        <div className="mesh3d__detached-controls">
       <div className="mesh3d__camera-controls" role="group" aria-label="Anatomical camera views">
         <span>View from patient’s</span>
         {ANATOMICAL_VIEWS.map((view) => (
@@ -447,125 +700,82 @@ export function MeshViewer3D({
         <small>Read-only display · Not clinical ground truth</small>
       </div>
 
-      <div className="mesh3d__canvas">
-        <MeshErrorBoundary key={`${caseId}:${runId}`}>
-          <Canvas
-            frameloop="demand"
-            dpr={[1, 1.5]}
-            gl={{
-              antialias: true,
-              alpha: false,
-              powerPreference: 'low-power',
-            }}
-            camera={{
-              position: [128, -157, 125],
-              fov: 43,
-              near: 0.1,
-              far: 1000,
-            }}
-            onCreated={({ camera }) => camera.up.set(0, 0, 1)}
-          >
-            <color attach="background" args={['#0b1420']} />
+      <p role="status" aria-live="polite">
+        <strong>Registered cortical reconstruction:</strong>
+        {' '}{cortexMessage}
+      </p>
 
-            <ambientLight intensity={1.3} />
-
-            <directionalLight
-              position={[100, -80, 160]}
-              intensity={2.5}
-            />
-
-            <directionalLight
-              position={[-100, 120, -50]}
-              intensity={0.7}
-            />
-
-            <Suspense
-              fallback={
-                <Html center>
-                  <span className="mesh3d__loading">
-                    Loading scientific segmentation…
-                  </span>
-                </Html>
+      <div
+        className="mesh3d__layer-controls"
+        aria-label="Registered cortical reconstruction controls"
+      >
+        <div className="mesh3d__layer-control">
+          <label className="mesh3d__layer-toggle">
+            <input
+              type="checkbox"
+              checked={cortexEnabled}
+              disabled={
+                !cortexAvailable ||
+                cortexFailedFor === caseId
               }
-            >
-              <group
-                position={[-centre[0], -centre[1], -centre[2]]}
-              >
-                {showSegmentation && (
-                  <SegmentationSurface
-                    url={meshUrl}
-                    opacity={segmentationOpacity}
-                    layer={predictionLayer}
-                    emphasis={predictionEmphasis}
-                    treatment={surfaceTreatment}
-                    onSurfaceStatus={setSurfaceStatus}
-                  />
-                )}
-
-                {removalActive && (
-                  <RemovedRefinementSurface
-                    key={removalUrl}
-                    url={removalUrl}
-                    onLoadState={setRemovalStatus}
-                  />
-                )}
-
-                {showAnatomy && (
-                  <AnatomySurface
-                    url={anatomyUrl}
-                    opacity={anatomyOpacity}
-                  />
-                )}
-
-                {plane !== 'none' && (
-                  <MRIPlaneTexture3D
-                    caseId={caseId}
-                    modality={modality}
-                    plane={plane}
-                    index={indices[plane]}
-                    metadata={metadata}
-                    opacity={planeOpacity}
-                    transparentBackground={transparentMRIBackground}
-                  />
-                )}
-              </group>
-            </Suspense>
-
-            <AnatomicalCameraControls
-              ref={cameraRef}
-              frame={cameraFrame}
-              onViewChange={setCameraView}
+              onChange={(event) => {
+                setCortexRequestedFor(
+                  event.target.checked ? caseId : null
+                )
+              }}
             />
-          </Canvas>
-        </MeshErrorBoundary>
-        <div className="mesh3d__camera-status" role="status" aria-live="polite">
-          {cameraStatus}
+            FreeSurfer cortex · experimental
+          </label>
+
+          <label>
+            Opacity {Math.round(cortexOpacity * 100)}%
+            <input
+              type="range"
+              min={10}
+              max={100}
+              step={5}
+              value={Math.round(cortexOpacity * 100)}
+              disabled={!cortexEnabled}
+              onChange={(event) => {
+                setCortexOpacity(Number(event.target.value) / 100)
+              }}
+            />
+          </label>
         </div>
-        {activeView && !cameraView.moving && (
-          <div className="mesh3d__orientation" aria-label={`Screen orientation: top ${ANATOMICAL_LABELS[activeView.edges[0]]}, bottom ${ANATOMICAL_LABELS[activeView.edges[1]]}, left ${ANATOMICAL_LABELS[activeView.edges[2]]}, right ${ANATOMICAL_LABELS[activeView.edges[3]]}`}>
-            {(['top', 'bottom', 'left', 'right'] as const).map((edge, index) => (
-              <span
-                key={edge}
-                className={`mesh3d__orientation-${edge}`}
-                title={ANATOMICAL_LABELS[activeView.edges[index]]}
-              >
-                {activeView.edges[index]}
-              </span>
-            ))}
-          </div>
-        )}
+
+        <div className="mesh3d__layer-control">
+          <label>
+            <input
+              type="checkbox"
+              checked={showLeftCortex}
+              disabled={!cortexEnabled}
+              onChange={(event) =>
+                setShowLeftCortex(event.target.checked)
+              }
+            />
+            Left hemisphere
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
+              checked={showRightCortex}
+              disabled={!cortexEnabled}
+              onChange={(event) =>
+                setShowRightCortex(event.target.checked)
+              }
+            />
+            Right hemisphere
+          </label>
+        </div>
       </div>
 
-      <div className="mesh3d__footer">
-        <span>Drag to rotate · Scroll to zoom</span>
-        <span>
-          MRI: {modality.toUpperCase()} ·
-          {plane === 'none'
-            ? ' No slice'
-            : ` ${plane} ${indices[plane]}`}
-        </span>
-        <span>RAS+ millimetres · Research only</span>
-      </div>
+      {cortexFailedFor === caseId && (
+        <p role="alert">
+          Optional cortical mesh loading failed.
+          The standard MRI viewer remains available.
+        </p>
+      )}
 
       <details className="mesh3d__advanced">
         <summary>
@@ -575,6 +785,8 @@ export function MeshViewer3D({
           </span>
         </summary>
         <div className="mesh3d__advanced-body">
+          <section className="mesh3d__advanced-group mesh3d__advanced-group--prediction" aria-label="Prediction & refinement">
+            <h4>Prediction & refinement</h4>
       <div
         className="mesh3d__surface-treatment"
         role="group"
@@ -690,7 +902,10 @@ export function MeshViewer3D({
                       : 'Preparing refinement evidence'}
         </small>
       </div>
+          </section>
 
+          <section className="mesh3d__advanced-group mesh3d__advanced-group--anatomy" aria-label="Anatomy & surfaces">
+            <h4>Anatomy & surfaces</h4>
       <div
         className="mesh3d__layer-controls"
         aria-label="3D scientific layer controls"
@@ -732,7 +947,9 @@ export function MeshViewer3D({
                 setShowSegmentation(event.target.checked)
               }}
             />
-            Final prediction
+            {predictionLayer === 'final'
+              ? 'Final prediction'
+              : 'Baseline prediction'}
           </label>
 
           <label>
@@ -808,7 +1025,10 @@ export function MeshViewer3D({
         Brain context: nonzero T1N foreground, selectable
         surface sampling. Prediction: unchanged frozen final mask.
       </p>
+          </section>
 
+          <section className="mesh3d__advanced-group mesh3d__advanced-group--mri" aria-label="MRI presentation">
+            <h4>MRI presentation</h4>
       <div className="mesh3d__context-controls">
         <label>
           MRI context
@@ -863,7 +1083,10 @@ export function MeshViewer3D({
         </button>
         <small>3D display only · MRI values preserved</small>
       </div>
+          </section>
 
+          <section className="mesh3d__advanced-group mesh3d__advanced-group--camera" aria-label="Camera & framing">
+            <h4>Camera & framing</h4>
       <div
         className="mesh3d__fit-controls"
         role="group"
@@ -894,8 +1117,12 @@ export function MeshViewer3D({
             : 'Foreground bounds from T1N · Display-only framing'}
         </small>
       </div>
+          </section>
+
         </div>
       </details>
+        </div>,
+      )}
 
     </section>
   )

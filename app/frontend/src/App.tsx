@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 
 import './App.css'
 import {
@@ -9,6 +9,14 @@ import { ResearchDisclaimer } from './components/ResearchDisclaimer'
 import { FinalTestPage } from './pages/FinalTestPage'
 import { PreparePage } from './pages/PreparePage'
 import { ResearchPage } from './pages/ResearchPage'
+
+const CorticalQCPreview = lazy(
+  () => import('./pages/CorticalQCWorkspace').then(
+    ({ CorticalQCPreview }) => ({
+      default: CorticalQCPreview,
+    }),
+  ),
+)
 
 function App() {
   const [
@@ -34,6 +42,18 @@ function App() {
 
         {activeMode === 'research' && (
           <ResearchPage />
+        )}
+
+        {activeMode === 'cortical-qc' && (
+          <Suspense
+            fallback={
+              <main role="status">
+                Loading genuine cortical research workspace…
+              </main>
+            }
+          >
+            <CorticalQCPreview />
+          </Suspense>
         )}
       </div>
 

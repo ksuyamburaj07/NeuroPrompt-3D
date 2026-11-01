@@ -419,3 +419,328 @@
   background: #aa85ff;
   box-shadow: 0 0 5px #aa85ff;
 }
+
+/* M11E6B7E — Four-way research workstation layout */
+
+.mri-viewer__stage {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.mri-viewer__stage--with-3d {
+  grid-template-columns:
+    minmax(0, 0.9fr)
+    minmax(0, 2.1fr)
+    minmax(0, 0.9fr);
+  grid-template-areas:
+    "axial hero coronal"
+    "sagittal hero context";
+  gap: 14px;
+}
+
+.mri-viewer__stage-hero {
+  grid-area: hero;
+  min-width: 0;
+}
+
+.mri-viewer__stage--with-3d
+.mri-viewer__stage-slot--axial {
+  grid-area: axial;
+}
+
+.mri-viewer__stage--with-3d
+.mri-viewer__stage-slot--sagittal {
+  grid-area: sagittal;
+}
+
+.mri-viewer__stage--with-3d
+.mri-viewer__stage-slot--coronal {
+  grid-area: coronal;
+}
+
+.mri-viewer__stage-slot {
+  min-width: 0;
+}
+
+.mri-viewer__stage-slot .mri-viewer__pane {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.mri-viewer__stage-hero .mesh3d {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border-color: #684254;
+  background: #151623;
+}
+
+.mri-viewer__stage-hero .mesh3d__canvas {
+  height: clamp(460px, 66vh, 700px);
+}
+
+.mri-viewer__stage-context {
+  grid-area: context;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #35445a;
+  border-radius: 10px;
+  background: #131b2a;
+  color: #c4cede;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mri-viewer__stage-kicker {
+  display: block;
+  color: #e5a8ba;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  margin-bottom: 10px;
+}
+
+.mri-viewer__stage-context strong {
+  display: block;
+  color: #f0e7ec;
+  font-size: 14px;
+}
+
+.mri-viewer__stage-caution {
+  color: #e2b4a9;
+  border-top: 1px solid #35445a;
+  padding-top: 12px;
+}
+
+@media (max-width: 1120px) {
+  .mri-viewer__stage--with-3d {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "hero hero"
+      "axial coronal"
+      "sagittal context";
+  }
+}
+
+@media (max-width: 700px) {
+  .mri-viewer__stage,
+  .mri-viewer__stage--with-3d {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mri-viewer__stage--with-3d {
+    grid-template-areas:
+      "hero"
+      "axial"
+      "coronal"
+      "sagittal"
+      "context";
+  }
+
+  .mri-viewer__stage-hero .mesh3d__canvas {
+    height: 380px;
+  }
+}
+
+
+/* M11E6B7G4 — Protected pial contour overlay */
+
+.mri-viewer__cortex-contours {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.mri-viewer__overlay-controls .mri-viewer__cortex-toggle {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  color: #e5ebf4;
+  cursor: pointer;
+}
+
+.mri-viewer__cortex-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #e9b85f;
+}
+
+.mri-viewer__cortex-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mri-viewer__cortex-toggle small {
+  color: #aebed1;
+  font-size: 11px;
+}
+
+
+/* M11E6B8 — Full-width 3D research control destination */
+
+.mri-viewer__workspace-controls {
+  min-width: 0;
+  margin-top: 18px;
+}
+
+.mri-viewer__workspace-controls:empty {
+  display: none;
+}
+
+.mesh3d__detached-controls {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #30435a;
+  border-radius: 12px;
+  background: #101b2b;
+}
+
+.mesh3d__detached-controls > * {
+  min-width: 0;
+}
+
+.mesh3d__detached-controls .mesh3d__advanced {
+  margin-top: 0;
+}
+
+@media (min-width: 1000px) {
+  .mesh3d__detached-controls .mesh3d__advanced-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px;
+  }
+
+  .mesh3d__detached-controls .mesh3d__advanced-body > * {
+    min-width: 0;
+  }
+}
+
+
+/* M11E6B8.2 — Horizontal research controls */
+
+/* Scoped to the main workstation's portal.
+   The genuine cortical QC layout is unaffected. */
+
+.mri-viewer__workspace-controls .mesh3d__detached-controls {
+  row-gap: 10px;
+  padding: 14px;
+}
+
+.mri-viewer__workspace-controls .mesh3d__camera-controls,
+.mri-viewer__workspace-controls .mesh3d__view-presets {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #34475e;
+  border-radius: 9px;
+  background: #17263a;
+}
+
+.mri-viewer__workspace-controls .mesh3d__camera-caption {
+  margin: 0;
+  padding: 0 4px;
+  line-height: 1.5;
+}
+
+.mri-viewer__workspace-controls .mesh3d__advanced {
+  min-width: 0;
+}
+
+/* Only create side-by-side quick-control groups
+   on sufficiently wide desktop viewports. */
+
+@media (min-width: 1180px) {
+  .mri-viewer__workspace-controls .mesh3d__detached-controls {
+    grid-template-columns:
+      minmax(0, 1.15fr)
+      minmax(0, 0.85fr);
+    align-items: start;
+    column-gap: 14px;
+  }
+
+  .mri-viewer__workspace-controls
+  .mesh3d__detached-controls > .mesh3d__camera-controls {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .mri-viewer__workspace-controls
+  .mesh3d__detached-controls > .mesh3d__camera-caption {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .mri-viewer__workspace-controls
+  .mesh3d__detached-controls > .mesh3d__view-presets {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: stretch;
+  }
+
+  .mri-viewer__workspace-controls
+  .mesh3d__detached-controls > .mesh3d__advanced {
+    grid-column: 1 / -1;
+  }
+}
+
+
+
+/* M11E6B8.3 — Grouped advanced research controls */
+
+.mri-viewer__workspace-controls .mesh3d__advanced-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 14px;
+  border: 1px solid #344961;
+  border-radius: 10px;
+  background: #152338;
+}
+
+.mri-viewer__workspace-controls .mesh3d__advanced-group h4 {
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #314760;
+  color: #e5effb;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.mri-viewer__workspace-controls .mesh3d__advanced-group > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mri-viewer__workspace-controls
+.mesh3d__advanced-group .mesh3d__layer-controls {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+  margin-bottom: 0;
+}
+
+.mri-viewer__workspace-controls
+.mesh3d__advanced-group .mesh3d__context-caption {
+  margin: 0;
+}
+
+@media (max-width: 999px) {
+  .mri-viewer__workspace-controls .mesh3d__advanced-group {
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 650px) {
+  .mri-viewer__workspace-controls .mesh3d__advanced-group {
+    padding: 11px;
+  }
+}

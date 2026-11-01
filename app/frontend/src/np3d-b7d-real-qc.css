@@ -1,0 +1,451 @@
+.np3d-qc__stage {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 0.95fr)
+    minmax(0, 2.2fr)
+    minmax(0, 0.95fr);
+  grid-template-areas:
+    "axial hero coronal"
+    "sagittal hero context";
+  gap: 14px;
+  align-items: start;
+}
+
+.np3d-qc__slot--axial { grid-area: axial; }
+.np3d-qc__slot--coronal { grid-area: coronal; }
+.np3d-qc__slot--sagittal { grid-area: sagittal; }
+
+.np3d-qc__hero {
+  grid-area: hero;
+  min-width: 0;
+}
+
+.np3d-qc__context {
+  grid-area: context;
+  min-width: 0;
+  background: #112a36;
+  border: 1px solid #355666;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #bed5df;
+}
+
+.np3d-qc__context strong {
+  display: block;
+  color: #edf7fa;
+  margin-bottom: 9px;
+  font-size: 14px;
+}
+
+.np3d-qc__context p {
+  margin: 8px 0;
+}
+
+.np3d-qc__legend {
+  color: #d9b470;
+}
+
+@media (max-width: 1120px) {
+  .np3d-qc__stage {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "hero hero"
+      "axial coronal"
+      "sagittal context";
+  }
+}
+
+@media (max-width: 700px) {
+  .np3d-qc__stage {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "hero"
+      "axial"
+      "coronal"
+      "sagittal"
+      "context";
+  }
+}
+
+
+/* M11E6B7G5 — Non-circular grid alignment */
+
+.np3d-qc__canvas-shell {
+  box-sizing: border-box;
+  width: 100%;
+  height: min(80vh, 760px);
+  min-height: 420px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #355666;
+}
+
+@media (min-width: 1121px) {
+  .np3d-qc__stage--mri-ready {
+    grid-template-rows: max-content max-content;
+  }
+
+  .np3d-qc__stage--mri-ready .np3d-qc__hero {
+    position: relative;
+    align-self: stretch;
+    min-height: 0;
+  }
+
+  .np3d-qc__stage--mri-ready .np3d-qc__canvas-shell {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+
+/* M11E6B7G5.8 — Full-width research controls */
+
+.np3d-qc__research-controls {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #365867;
+  border-radius: 12px;
+  background: #102632;
+  color: #eaf5f9;
+}
+
+.np3d-qc__controls-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.np3d-qc__controls-heading strong {
+  font-size: 14px;
+}
+
+.np3d-qc__controls-heading span {
+  font-size: 11px;
+  color: #d5b28c;
+}
+
+.np3d-qc__research-controls > label {
+  grid-column: span 2;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid #355767;
+  border-radius: 8px;
+  background: #193542;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.np3d-qc__research-controls > label:nth-of-type(n+4) {
+  grid-column: span 3;
+}
+
+.np3d-qc__research-controls input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #56c7d6;
+}
+
+.np3d-qc__research-controls input[type="range"] {
+  flex: 1;
+  min-width: 100px;
+  accent-color: #56c4d7;
+}
+
+.np3d-qc__research-controls :disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 950px) {
+  .np3d-qc__research-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .np3d-qc__research-controls > label,
+  .np3d-qc__research-controls > label:nth-of-type(n+4) {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .np3d-qc__research-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+
+/* M11E10.2 — Provenance and mesh recovery */
+
+.np3d-qc__provenance {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 2fr) 1fr;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.np3d-qc__provenance > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #345564;
+  border-radius: 9px;
+  background: #112a36;
+}
+
+.np3d-qc__provenance span {
+  color: #b9d1dc;
+  font-size: 11px;
+}
+
+.np3d-qc__provenance code {
+  overflow-wrap: anywhere;
+  color: #e4f0f5;
+  font-size: 11px;
+}
+
+.np3d-qc__provenance strong {
+  color: #e6b38e;
+  font-size: 12px;
+}
+
+.np3d-qc__mesh-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  padding: 28px;
+  background: #091c27;
+  color: #e4f0f5;
+  text-align: center;
+}
+
+.np3d-qc__mesh-error p {
+  margin: 0;
+  max-width: 440px;
+  line-height: 1.6;
+}
+
+.np3d-qc__mesh-error button {
+  padding: 10px 16px;
+  border: 1px solid #487b8b;
+  border-radius: 8px;
+  background: #193844;
+  color: white;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .np3d-qc__provenance {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* M11E10.3 — Genuine anatomical camera */
+
+.np3d-qc__camera-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin: 14px 0;
+  padding: 15px;
+  border: 1px solid #365765;
+  border-radius: 10px;
+  background: #112a36;
+}
+
+.np3d-qc__camera-navigation header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.np3d-qc__camera-navigation strong {
+  color: #edf7fa;
+  font-size: 13px;
+}
+
+.np3d-qc__camera-navigation header span,
+.np3d-qc__camera-navigation p {
+  color: #b9d1dc;
+  font-size: 11px;
+}
+
+.np3d-qc__camera-navigation p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.np3d-qc__camera-buttons {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.np3d-qc__camera-buttons button {
+  min-width: 0;
+  padding: 11px 7px;
+  border: 1px solid #3c6474;
+  border-radius: 7px;
+  background: #1b3b49;
+  color: #edf7fa;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.np3d-qc__camera-buttons button[aria-pressed="true"] {
+  border-color: #66cfdf;
+  background: #175165;
+  color: #f0fbfd;
+}
+
+.np3d-qc__camera-buttons button:focus-visible {
+  outline: 2px solid #66cfdf;
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .np3d-qc__camera-buttons {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .np3d-qc__camera-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+/* Research display preset buttons */
+[aria-label="Research display presets"] > button {
+  background: #1c3e4e;
+  color: #edf7fa;
+  border: 1px solid #446c7d;
+  border-radius: 7px;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+[aria-label="Research display presets"] > button:hover {
+  background: #265566;
+  border-color: #74b9cd;
+}
+
+[aria-label="Research display presets"] > button:focus-visible {
+  outline: 2px solid #66d9e8;
+  outline-offset: 3px;
+}
+
+
+/* M11E14B — Contextual cortical viewer guide */
+
+.np3d-qc__hero {
+  position: relative;
+}
+
+.np3d-qc__viewer-guide {
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  left: 12px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  border: 1px solid #416c7b;
+  border-radius: 9px;
+  background: rgba(10, 31, 42, 0.96);
+  color: #edf7fa;
+  font-size: 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+}
+
+.np3d-qc__viewer-guide[open] {
+  width: min(350px, calc(100% - 24px));
+}
+
+.np3d-qc__viewer-guide summary {
+  padding: 10px 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.np3d-qc__viewer-guide summary:focus-visible {
+  outline: 2px solid #66d9e8;
+  outline-offset: 3px;
+}
+
+.np3d-qc__viewer-guide-content {
+  max-height: min(55vh, 380px);
+  overflow-y: auto;
+  padding: 0 14px 14px;
+  border-top: 1px solid #365867;
+  line-height: 1.6;
+}
+
+.np3d-qc__viewer-guide-content strong {
+  display: block;
+  margin-top: 12px;
+}
+
+.np3d-qc__viewer-guide-content p {
+  margin: 10px 0 0;
+}
+
+.np3d-qc__guide-caution {
+  color: #f0c49d;
+}
+
+
+/* M11E14B — Readable reconstruction provenance */
+
+.np3d-qc__provenance .np3d-qc__source-label {
+  color: #edf7fa;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.np3d-qc__source-detail summary {
+  color: #72cadb;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.np3d-qc__source-detail summary:focus-visible {
+  outline: 2px solid #66d9e8;
+  outline-offset: 2px;
+}
+
+.np3d-qc__source-detail[open] code {
+  display: block;
+  margin-top: 7px;
+}

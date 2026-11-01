@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -396,6 +397,18 @@ async def validate_and_stage_case(
         # ----------------------------------------------------------
         # Persist metadata only after successful validation.
         # ----------------------------------------------------------
+
+        source_hasher = hashlib.sha256()
+
+        with Path(staged_modalities["t1n"]).open("rb") as source_file:
+            for chunk in iter(
+                lambda: source_file.read(_COPY_CHUNK_SIZE),
+                b"",
+            ):
+                source_hasher.update(chunk)
+
+        source_t1n_sha256 = source_hasher.hexdigest()
+
         result = CaseValidationResponse(
             valid=True,
             status="ready",
@@ -404,6 +417,7 @@ async def validate_and_stage_case(
             geometry=geometry,
             ground_truth=gt_status,
             ready_for_inference=True,
+            source_t1n_sha256=source_t1n_sha256,
             errors=[],
         )
 

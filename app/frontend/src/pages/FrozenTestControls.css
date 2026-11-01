@@ -1,0 +1,118 @@
+.frozen-test-page button,
+.frozen-test-page select {
+  background: #142a36;
+  color: #e5f3f8;
+  border: 1px solid #426173;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: inherit;
+  line-height: 1.4;
+}
+
+.frozen-test-page button {
+  cursor: pointer;
+}
+
+.frozen-test-page select {
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.frozen-test-page select option {
+  background: #142a36;
+  color: #e5f3f8;
+}
+
+.frozen-test-page button:hover:not(:disabled),
+.frozen-test-page select:hover {
+  background: #204254;
+  border-color: #6ca9bd;
+}
+
+.frozen-test-page button:focus-visible,
+.frozen-test-page select:focus-visible {
+  outline: 2px solid #64d8e4;
+  outline-offset: 3px;
+}
+
+.frozen-test-page button[aria-pressed="true"] {
+  color: #b4f3ef;
+  background: #17494b;
+  border-color: #51b9b7;
+}
+
+.frozen-test-page button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.frozen-test-page th,
+.frozen-test-page td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(139, 168, 186, 0.14);
+  white-space: nowrap;
+}
+
+.frozen-test-page th {
+  color: #a9c3d1;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.frozen-test-page tbody tr:hover td {
+  background: rgba(86, 151, 172, 0.08);
+}
+
+
+/* M11E12E11: Direct navigation over authenticated case evidence. */
+
+.frozen-case-navigator {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0 22px;
+  padding: 18px;
+  border: 1px solid #365665;
+  border-radius: 10px;
+  background: #0b1c26;
+}
+
+.frozen-case-navigator__hint {
+  margin: 6px 0 0;
+  color: #a9c3d1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.frozen-case-navigator__controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.frozen-case-navigator__controls span {
+  color: #c7dde7;
+  font-size: 14px;
+}
+
+.frozen-test-page .frozen-case-navigator input {
+  box-sizing: border-box;
+  width: 125px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #426173;
+  border-radius: 6px;
+  color: #e5f3f8;
+  background: #142a36;
+  font: inherit;
+  color-scheme: dark;
+}
+
+.frozen-test-page .frozen-case-navigator input:focus-visible {
+  outline: 2px solid #64d8e4;
+  outline-offset: 3px;
+}
+
+.frozen-case-navigator__detail-heading {
+  scroll-margin-top: 110px;
+}

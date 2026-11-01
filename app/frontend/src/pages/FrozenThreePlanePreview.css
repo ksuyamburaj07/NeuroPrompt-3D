@@ -1,0 +1,160 @@
+.frozen-threeplane {
+  padding: 18px;
+  border: 1px solid #284653;
+  border-radius: 10px;
+  background: #03090e;
+}
+
+.frozen-threeplane__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.frozen-threeplane__description,
+.frozen-threeplane__header > span {
+  color: #a9c3ce;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.frozen-threeplane__controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 22px 0;
+}
+
+.frozen-threeplane__controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  color: #c7dce5;
+  font-size: 13px;
+}
+
+.frozen-threeplane__controls input {
+  width: 100%;
+  accent-color: #5cc9c7;
+}
+
+.frozen-threeplane__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.frozen-threeplane__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px 6px;
+  border: 1px solid #213943;
+  border-radius: 8px;
+  background: #08131b;
+}
+
+.frozen-threeplane__panel-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.frozen-threeplane__panel-title span,
+.frozen-threeplane__direction {
+  color: #a4cfda;
+  font-size: 12px;
+}
+
+.frozen-threeplane__image-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: center;
+}
+
+.frozen-threeplane__image-row > span {
+  color: #a4cfda;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.frozen-threeplane__image-frame {
+  position: relative;
+  box-sizing: border-box;
+  width: min(100%, 280px);
+  margin: 0 auto;
+  border: 1px solid #294653;
+  background: #000;
+}
+
+.frozen-threeplane__image-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.frozen-threeplane__crosshair {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.frozen-threeplane__crosshair line {
+  fill: none;
+  stroke: #5ce5d4;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.frozen-threeplane__crosshair circle {
+  fill: #f3cc69;
+  stroke: #07131c;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.frozen-threeplane__crosshair-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  color: #c7dce5;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.frozen-threeplane__crosshair-toggle input {
+  accent-color: #5cc9c7;
+}
+
+.frozen-threeplane__message {
+  margin-top: 16px;
+  color: #b8cbd5;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .frozen-threeplane__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .frozen-threeplane__controls {
+    grid-template-columns: 1fr;
+  }
+}
