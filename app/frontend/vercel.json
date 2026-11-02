@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/api/v1/cases/:caseId/viewer/:path*",
+      "destination": "/api/live-viewer?caseId=:caseId&path=:path*"
+    },
+    {
       "source": "/api/v1/research/runs",
       "destination": "/api/saved-runs?resource=list"
     },
@@ -38,6 +42,9 @@
       "maxDuration": 60
     },
     "api/saved-runs.js": {
+      "maxDuration": 60
+    },
+    "api/live-viewer.js": {
       "maxDuration": 60
     }
   }
