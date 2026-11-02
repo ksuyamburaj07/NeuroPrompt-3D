@@ -56,14 +56,21 @@ async def app(scope, receive, send):
         await reject(scope, receive, send)
         return
 
-    allowed_login = os.environ.get(
-        "NP3D_TAILNET_ALLOWED_LOGIN", ""
-    ).encode("utf-8")
+    allowed_logins = [
+        login.strip().encode("utf-8")
+        for login in os.environ.get(
+            "NP3D_TAILNET_ALLOWED_LOGINS", ""
+        ).split(",")
+        if login.strip()
+    ]
 
     if (
-        not allowed_login
-        or identity is None
-        or not hmac.compare_digest(identity, allowed_login)
+        identity is None
+        or not allowed_logins
+        or not any(
+            hmac.compare_digest(identity, login)
+            for login in allowed_logins
+        )
     ):
         await reject(scope, receive, send)
         return
