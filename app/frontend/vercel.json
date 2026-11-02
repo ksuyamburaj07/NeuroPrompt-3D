@@ -2,8 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/api/v1/frozen-test/:caseIndex/slices/:plane",
+      "destination": "/api/frozen-mri"
+    },
+    {
       "source": "/api/v1/frozen-test/:path*",
       "destination": "https://ksuyamburaj07--neuroprompt3d-real-backend-research-api.us-east.modal.run/api/v1/frozen-test/:path*"
     }
-  ]
+  ],
+  "functions": {
+    "api/frozen-mri.js": {
+      "maxDuration": 60
+    }
+  }
 }
