@@ -2,6 +2,26 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/api/v1/cases/:caseId",
+      "destination": "/api/case-upload?operation=discard&caseId=:caseId"
+    },
+    {
+      "source": "/api/v1/upload-sessions/:sessionId/files/:field",
+      "destination": "/api/case-upload?operation=chunk&sessionId=:sessionId&field=:field"
+    },
+    {
+      "source": "/api/v1/upload-sessions/:sessionId/finalize",
+      "destination": "/api/case-upload?operation=finalize&sessionId=:sessionId"
+    },
+    {
+      "source": "/api/v1/upload-sessions/:sessionId",
+      "destination": "/api/case-upload?operation=status&sessionId=:sessionId"
+    },
+    {
+      "source": "/api/v1/upload-sessions",
+      "destination": "/api/case-upload?operation=create"
+    },
+    {
       "source": "/api/v1/cases/:caseId/viewer/:path*",
       "destination": "/api/live-viewer?caseId=:caseId&path=:path*"
     },
@@ -45,6 +65,9 @@
       "maxDuration": 60
     },
     "api/live-viewer.js": {
+      "maxDuration": 60
+    },
+    "api/case-upload.js": {
       "maxDuration": 60
     }
   }

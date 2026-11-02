@@ -1,3 +1,4 @@
+import { chunkedValidateCase } from './chunkedUpload'
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.DEV ? 'http://127.0.0.1:8000/api/v1' : '/api/v1')
@@ -111,48 +112,34 @@ async function apiRequest(
 export async function validateCase(
   files: CaseFiles,
 ): Promise<CaseValidationResponse> {
-  const form = new FormData()
-
-  form.append('t1n', files.t1n, files.t1n.name)
-  form.append('t1c', files.t1c, files.t1c.name)
-  form.append('t2w', files.t2w, files.t2w.name)
-  form.append('t2f', files.t2f, files.t2f.name)
-
-  if (files.segmentation) {
-    form.append(
-      'segmentation',
-      files.segmentation,
-      files.segmentation.name,
-    )
-  }
-
-  const payload = await apiRequest('cases/validate', {
-    method: 'POST',
-    body: form,
-  })
-
-  if (
-    typeof payload !== 'object' ||
-    payload === null ||
-    !('valid' in payload) ||
-    typeof payload.valid !== 'boolean' ||
-    !('ready_for_inference' in payload) ||
-    typeof payload.ready_for_inference !== 'boolean' ||
-    !('errors' in payload) ||
-    !Array.isArray(payload.errors)
-  ) {
-    throw new Error('Unexpected MRI validation response from the backend.')
-  }
-
-  return payload as CaseValidationResponse
+  return chunkedValidateCase(files)
 }
 
 export async function deleteStagedCase(
   caseId: string,
 ): Promise<void> {
+  const stored = sessionStorage.getItem(
+    `np3d.case.access.${caseId}`,
+  )
+
+  if (!stored) {
+    throw new Error('Original upload authorization unavailable.')
+  }
+
+  const access = JSON.parse(stored) as {
+    uploadId: string
+    token: string
+  }
+
   const payload = await apiRequest(
     `cases/${encodeURIComponent(caseId)}`,
-    { method: 'DELETE' },
+    {
+      method: 'DELETE',
+      headers: {
+        'X-NP3D-Session-Token': access.token,
+        'X-NP3D-Upload-Id': access.uploadId,
+      },
+    },
   )
 
   if (
@@ -163,4 +150,8 @@ export async function deleteStagedCase(
   ) {
     throw new Error('The backend did not confirm case deletion.')
   }
+
+  sessionStorage.removeItem(
+    `np3d.case.access.${caseId}`,
+  )
 }
