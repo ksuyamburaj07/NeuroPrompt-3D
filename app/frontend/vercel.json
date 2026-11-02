@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/api/v1/frozen-test/:caseIndex/slices/:plane",
-      "destination": "/api/frozen-mri"
+      "source": "/api/v1/frozen-test/cases/:caseIndex/slices/:plane",
+      "destination": "/api/frozen-mri?caseIndex=:caseIndex&plane=:plane"
     },
     {
       "source": "/api/v1/frozen-test/:path*",
