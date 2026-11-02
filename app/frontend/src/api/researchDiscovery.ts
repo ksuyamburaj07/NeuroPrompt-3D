@@ -40,14 +40,14 @@ export async function getRecentResearchRuns(
     }
 
     throw new Error(
-      'Cannot reach the local research discovery service.',
+      'Cannot reach the saved-run service.',
       { cause: error },
     )
   }
 
   if (response.status === 404) {
     throw new Error(
-      'Local run discovery is disabled or unavailable. ' +
+      'Saved-run discovery is disabled or unavailable. ' +
       'You can still inspect a known run ID manually.',
     )
   }

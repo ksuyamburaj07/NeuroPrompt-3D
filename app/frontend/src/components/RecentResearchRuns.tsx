@@ -89,7 +89,7 @@ export function RecentResearchRuns({
         </div>
 
         <span className="panel-status">
-          Local discovery
+          Cloud saved runs
         </span>
       </div>
 

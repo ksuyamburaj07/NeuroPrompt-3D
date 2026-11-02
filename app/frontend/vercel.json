@@ -2,6 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/api/v1/research/runs",
+      "destination": "/api/saved-runs?resource=list"
+    },
+    {
+      "source": "/api/v1/runs/:runId",
+      "destination": "/api/saved-runs?resource=run&runId=:runId"
+    },
+    {
       "source": "/qc/mri/metadata",
       "destination": "/api/cortical-qc?resource=metadata"
     },
@@ -27,6 +35,9 @@
       "maxDuration": 60
     },
     "api/cortical-qc.js": {
+      "maxDuration": 60
+    },
+    "api/saved-runs.js": {
       "maxDuration": 60
     }
   }
