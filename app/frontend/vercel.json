@@ -2,6 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/qc/mri/metadata",
+      "destination": "/api/cortical-qc?resource=metadata"
+    },
+    {
+      "source": "/qc/mri/:kind/:plane/:index",
+      "destination": "/api/cortical-qc?resource=image&kind=:kind&plane=:plane&index=:index"
+    },
+    {
+      "source": "/qc/meshes/:filename",
+      "destination": "/api/cortical-qc?resource=mesh&filename=:filename"
+    },
+    {
       "source": "/api/v1/frozen-test/cases/:caseIndex/slices/:plane",
       "destination": "/api/frozen-mri?caseIndex=:caseIndex&plane=:plane"
     },
@@ -12,6 +24,9 @@
   ],
   "functions": {
     "api/frozen-mri.js": {
+      "maxDuration": 60
+    },
+    "api/cortical-qc.js": {
       "maxDuration": 60
     }
   }
