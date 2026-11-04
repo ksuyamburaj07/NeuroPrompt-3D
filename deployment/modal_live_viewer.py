@@ -93,6 +93,50 @@ def verify_viewer():
     }
 
 
+
+@app.function(
+    image=image,
+    cpu=1,
+    memory=4096,
+    max_containers=1,
+    volumes=MOUNT,
+)
+def verify_new_case():
+    from app.backend.services.viewer_service import (
+        viewer_metadata,
+        viewer_slice_png,
+    )
+
+    case_id = "case_6d362b430e614eb1a483f553aa234ba0"
+
+    metadata = viewer_metadata(case_id)
+
+    assert metadata["case_id"] == case_id
+    assert metadata["shape_ras_xyz"] == [182, 218, 182]
+
+    png = viewer_slice_png(
+        case_id, "t1n", "axial", 91
+    )
+
+    assert png.startswith(bytes.fromhex("89504e470d0a1a0a"))
+
+    return {
+        "case_id": case_id,
+        "shape": metadata["shape_ras_xyz"],
+        "slice_bytes": len(png),
+        "success": True,
+    }
+
+
+@app.local_entrypoint()
+def verify_uploaded_case():
+    result = verify_new_case.remote()
+    assert result["success"]
+    print("PASS: Uploaded browser case visible in Modal")
+    print("PASS: Original MRI slice renderer")
+    print(result)
+
+
 @app.local_entrypoint()
 def verify():
     result = verify_viewer.remote()
@@ -149,6 +193,16 @@ def live_viewer_api():
         redoc_url=None,
         openapi_url=None,
     )
+
+    # Refresh cases committed by the separate upload container.
+    import asyncio
+    refresh_lock = asyncio.Lock()
+
+    @api.middleware("http")
+    async def refresh_runtime(request, call_next):
+        async with refresh_lock:
+            runtime.reload()
+            return await call_next(request)
 
     case_pattern = re.compile(r"case_[0-9a-f]{32}")
     run_pattern = re.compile(r"run_[0-9a-f]{32}")
