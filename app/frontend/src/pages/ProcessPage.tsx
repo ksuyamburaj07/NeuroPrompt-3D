@@ -68,6 +68,7 @@ function InferencePanel({
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [observedStages, setObservedStages] = useState<ObservedStage[]>([])
   const launchLock = useRef(false)
+  const queuedSinceRef = useRef<number | null>(null)
   const creationKeyRef = useRef<string | null>(null)
 
   const runId = run?.run_id ?? existingRunId
@@ -207,15 +208,25 @@ function InferencePanel({
         }
 
         if (latest.status === 'queued') {
-          setNotice(
-            'This existing run is queued. No worker will be started ' +
-            'automatically. Check its server status before taking action.',
-          )
-          setPhase('attention')
-          return
-        }
+          const now = Date.now()
+          queuedSinceRef.current ??= now
 
-        setNotice(null)
+          if (now - queuedSinceRef.current >= 120000) {
+            setNotice(
+              'The run is still queued after two minutes. ' +
+              'Inspect its status before attempting any new action.',
+            )
+            setPhase('attention')
+            return
+          }
+
+          setNotice(
+            'Run queued. The protected cloud worker may still be starting.',
+          )
+        } else {
+          queuedSinceRef.current = null
+          setNotice(null)
+        }
       } catch (error) {
         if (stopped) return
         setConnectionError(

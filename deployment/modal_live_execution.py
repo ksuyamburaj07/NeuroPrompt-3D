@@ -102,73 +102,90 @@ def execute_cloud_run(run_id: str):
     )
     runtime.commit()
 
-    # Reconstruct the same frozen source used in the
-    # successfully verified persistence regression.
-    source_root = Path("/root/sam-med3d-frozen")
-
-    subprocess.run(
-        ["git", "clone", SAM_BUNDLE, str(source_root)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
-    subprocess.run(
-        [
-            "git", "-C", str(source_root),
-            "checkout", "--detach", SAM_COMMIT,
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
-    actual_commit = subprocess.check_output(
-        ["git", "-C", str(source_root), "rev-parse", "HEAD"],
-        text=True,
-    ).strip()
-
-    if actual_commit != SAM_COMMIT:
-        raise RuntimeError("Frozen SAM source mismatch")
-
-    # Preserve the original application's checkpoint contract.
-    checkpoint = Path(
-        "/root/checkpoints/"
-        "M7K_C_Full_Baseline_Training/best_baseline.pt"
-    )
-    checkpoint.parent.mkdir(parents=True, exist_ok=True)
-    checkpoint.symlink_to(BASELINE)
-
-    from app.backend.services import execution_service
-
-    original_update = execution_service.update_live_run
-
-    def durable_update(*args, **kwargs):
-        result = original_update(*args, **kwargs)
-        runtime.commit()
-        return result
-
-    # Every original stage update becomes visible to the
-    # separate browser polling service.
-    execution_service.update_live_run = durable_update
-
+    # Cloud worker failure recovery.
     try:
-        execution_service.execute_live_run(run_id)
-    finally:
-        runtime.commit()
+        # Reconstruct the same frozen source used in the
+        # successfully verified persistence regression.
+        source_root = Path("/root/sam-med3d-frozen")
 
-    completed = load_live_run(run_id)
+        subprocess.run(
+            ["git", "clone", SAM_BUNDLE, str(source_root)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
 
-    if completed.status != "complete":
-        raise RuntimeError("Inference did not complete")
+        subprocess.run(
+            [
+                "git", "-C", str(source_root),
+                "checkout", "--detach", SAM_COMMIT,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
 
-    return {
-        "run_id": completed.run_id,
-        "case_id": completed.case_id,
-        "status": completed.status,
-        "action": completed.action,
-        "artifact_count": len(completed.artifacts),
-    }
+        actual_commit = subprocess.check_output(
+            ["git", "-C", str(source_root), "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
+
+        if actual_commit != SAM_COMMIT:
+            raise RuntimeError("Frozen SAM source mismatch")
+
+        # Preserve the original application's checkpoint contract.
+        checkpoint = Path(
+            "/root/checkpoints/"
+            "M7K_C_Full_Baseline_Training/best_baseline.pt"
+        )
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint.symlink_to(BASELINE)
+
+        from app.backend.services import execution_service
+
+        original_update = execution_service.update_live_run
+
+        def durable_update(*args, **kwargs):
+            result = original_update(*args, **kwargs)
+            runtime.commit()
+            return result
+
+        # Every original stage update becomes visible to the
+        # separate browser polling service.
+        execution_service.update_live_run = durable_update
+
+        try:
+            execution_service.execute_live_run(run_id)
+        finally:
+            runtime.commit()
+
+        completed = load_live_run(run_id)
+
+        if completed.status != "complete":
+            raise RuntimeError("Inference did not complete")
+
+        return {
+            "run_id": completed.run_id,
+            "case_id": completed.case_id,
+            "status": completed.status,
+            "action": completed.action,
+            "artifact_count": len(completed.artifacts),
+        }
+    except Exception as exc:
+        from app.backend.schemas.runs import RunError
+        current = load_live_run(run_id)
+        if current.status == 'running':
+            update_live_run(
+                run_id,
+                status='failed',
+                stage='failed',
+                error=RunError(
+                    code=type(exc).__name__,
+                    message=str(exc)[:400] or 'Worker failed',
+                ),
+            )
+            runtime.commit()
+        raise
 
 
 @app.function(
