@@ -144,6 +144,16 @@ def saved_runs_api():
         openapi_url=None,
     )
 
+    import asyncio
+
+    read_lock = asyncio.Lock()
+
+    @api.middleware("http")
+    async def refresh_saved_runs(request, call_next):
+        async with read_lock:
+            runtime.reload()
+            return await call_next(request)
+
     @api.get("/api/v1/research/runs")
     def recent_runs(
         limit: int = Query(default=20, ge=1, le=50),

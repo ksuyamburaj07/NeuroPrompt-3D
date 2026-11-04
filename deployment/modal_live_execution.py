@@ -87,10 +87,20 @@ def execute_cloud_run(run_id: str):
 
     record = load_live_run(run_id)
 
-    if record.status != "running":
+    if record.status != "queued":
         raise RuntimeError(
-            "Worker requires an already-dispatched running record"
+            "Run already claimed; refusing duplicate execution"
         )
+
+    from app.backend.services.run_service import update_live_run
+
+    update_live_run(
+        run_id,
+        status="running",
+        stage="validating",
+        progress=0.01,
+    )
+    runtime.commit()
 
     # Reconstruct the same frozen source used in the
     # successfully verified persistence regression.
