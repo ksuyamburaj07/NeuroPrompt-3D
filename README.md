@@ -21,7 +21,7 @@ The locally accepted application has four integrated modes.
 
 All four workspaces are integrated into one application.
 
-**Hosted application (currently access-controlled):**
+**Hosted research application (public production URL):**
 https://neuroprompt-3d.vercel.app
 
 **Source repository:**
@@ -34,9 +34,10 @@ https://github.com/ksuyamburaj07/NeuroPrompt-3D
 - Scientific decision: ABSTAIN_BASELINE (SAM refinement not applied).
 - Authenticated artifact download capability.
 
-The hosted application is currently restricted to authorized viewers.
-Public access and redistribution of research MRI imagery are subject
-to separate security and dataset-permission review.
+The production website is publicly accessible. Visitor-level API
+authorization and dataset redistribution clearance are not yet complete.
+Do not upload sensitive or identifiable patient data. The application
+is for research and educational use only.
 
 **Local development application:** `http://127.0.0.1:8090`.
 
@@ -183,7 +184,7 @@ The source repository should exclude private inputs, dataset archives, runtime c
 
 **Local unified application: accepted.**
 
-**Hosted deployment: operational, access-controlled; unrestricted public release pending security and licensing review.**
+**Hosted deployment: operational and publicly reachable; API security and research-data redistribution review remain open.**
 
 The current local application contains research and writable case/run APIs. Its loopback restrictions are not a substitute for public-facing authentication, authorization, resource controls or secure deployment.
 
