@@ -19,11 +19,26 @@ The locally accepted application has four integrated modes.
 | **Research Explorer** | Understand the scientific question, experimental methods, verified outcomes, limitations, and reproducibility evidence. |
 | **Cortical QC** | Inspect provisional bilateral FreeSurfer pial surfaces, registered MRI slices, cortical intersections, and patient-oriented 3D camera views. |
 
-All four modes run through one local application server.
+All four workspaces are integrated into one application.
 
-**Local application:** `http://127.0.0.1:8090`
+**Hosted application (currently access-controlled):**
+https://neuroprompt-3d.vercel.app
 
-This is a localhost address, not a publicly hosted demo.
+**Source repository:**
+https://github.com/ksuyamburaj07/NeuroPrompt-3D
+
+**Cloud verification — November 4, 2026:**
+- Genuine four-modality MRI upload and interactive 3D visualization.
+- Completed frozen scientific inference on Modal CPU infrastructure.
+- Eleven persisted artifacts independently verified.
+- Scientific decision: ABSTAIN_BASELINE (SAM refinement not applied).
+- Authenticated artifact download capability.
+
+The hosted application is currently restricted to authorized viewers.
+Public access and redistribution of research MRI imagery are subject
+to separate security and dataset-permission review.
+
+**Local development application:** `http://127.0.0.1:8090`.
 
 ## Scientific question
 
@@ -168,7 +183,7 @@ The source repository should exclude private inputs, dataset archives, runtime c
 
 **Local unified application: accepted.**
 
-**Public hosted deployment: not yet released.**
+**Hosted deployment: operational, access-controlled; unrestricted public release pending security and licensing review.**
 
 The current local application contains research and writable case/run APIs. Its loopback restrictions are not a substitute for public-facing authentication, authorization, resource controls or secure deployment.
 
