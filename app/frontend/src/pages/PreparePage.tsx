@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, type ChangeEvent, type DragEvent } from 'react'
+import { getViewerMetadata } from '../api/viewer'
 import './PreparePage.css'
 const ProcessPage = lazy(
   () => import('./ProcessPage').then(
@@ -56,6 +57,7 @@ export function PreparePage() {
     () => readRunRecovery(),
   )
   const [recoveryInput, setRecoveryInput] = useState('')
+  const [stagedCaseInput, setStagedCaseInput] = useState('')
   const [isRecovering, setIsRecovering] = useState(false)
   const [recoveryError, setRecoveryError] = useState<string | null>(null)
 
@@ -176,6 +178,39 @@ export function PreparePage() {
       )
     } finally {
       setIsDiscarding(false)
+    }
+  }
+
+  async function recoverStagedCase() {
+    if (isRecovering || ready) return
+
+    const caseId = stagedCaseInput.trim()
+
+    if (!/^case_[0-9a-f]{32}$/.test(caseId)) {
+      setRecoveryError('Enter a valid case ID.')
+      return
+    }
+
+    setIsRecovering(true)
+    setRecoveryError(null)
+
+    try {
+      const metadata = await getViewerMetadata(caseId)
+
+      if (metadata.case_id !== caseId) {
+        throw new Error('MRI case identity mismatch.')
+      }
+
+      setExistingRunId(null)
+      setProcessCaseId(caseId)
+    } catch (cause) {
+      setRecoveryError(
+        cause instanceof Error
+          ? cause.message
+          : 'Unable to reopen validated MRI case.',
+      )
+    } finally {
+      setIsRecovering(false)
     }
   }
 
@@ -636,6 +671,31 @@ export function PreparePage() {
                 </button>
               </div>
             )}
+
+            <form
+              className="prepare__recovery-form"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void recoverStagedCase()
+              }}
+            >
+              <input
+                type="text"
+                value={stagedCaseInput}
+                onChange={(event) => setStagedCaseInput(event.target.value)}
+                placeholder="case_..."
+                aria-label="Previously validated case ID"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={isRecovering}
+              />
+              <button
+                type="submit"
+                disabled={isRecovering || !stagedCaseInput.trim()}
+              >
+                Open validated case
+              </button>
+            </form>
 
             <form
               className="prepare__recovery-form"
