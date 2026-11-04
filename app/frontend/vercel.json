@@ -2,6 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/api/v1/cases/:caseId/runs",
+      "destination": "/api/run-control?operation=create&caseId=:caseId"
+    },
+    {
+      "source": "/api/v1/runs/:runId/execute",
+      "destination": "/api/run-control?operation=execute&runId=:runId"
+    },
+    {
       "source": "/api/v1/cases/:caseId",
       "destination": "/api/case-upload?operation=discard&caseId=:caseId"
     },
@@ -68,6 +76,9 @@
       "maxDuration": 60
     },
     "api/case-upload.js": {
+      "maxDuration": 60
+    },
+    "api/run-control.js": {
       "maxDuration": 60
     }
   }
