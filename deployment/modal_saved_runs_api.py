@@ -198,4 +198,162 @@ def saved_runs_api():
 
         return RunView.from_record(record)
 
+    @api.get(
+        "/api/v1/runs/{run_id}/artifacts/{artifact_name}"
+    )
+    def download_verified_artifact(
+        run_id: str,
+        artifact_name: str,
+    ):
+        from fastapi.responses import FileResponse
+        from app.backend.services.artifact_service import (
+            ARTIFACT_SPECS,
+            ArtifactRunNotComplete,
+            ArtifactNotFound,
+            ArtifactIntegrityError,
+            resolve_live_artifact,
+        )
+
+        # Owner-only release checkpoint: one verified cloud run.
+        allowed_run = (
+            "run_ee71bd9f95e755f7909f6011d0ef7410"
+        )
+        allowed_case = (
+            "case_6d362b430e614eb1a483f553aa234ba0"
+        )
+
+        if (
+            run_id != allowed_run
+            or artifact_name not in ARTIFACT_SPECS
+        ):
+            raise HTTPException(404, "Artifact unavailable")
+
+        try:
+            record = load_live_run(run_id)
+            if record.case_id != allowed_case:
+                raise HTTPException(404, "Artifact unavailable")
+
+            artifact = resolve_live_artifact(
+                run_id, artifact_name
+            )
+        except (FileNotFoundError, ArtifactNotFound):
+            raise HTTPException(
+                404, "Artifact unavailable"
+            ) from None
+        except ArtifactRunNotComplete:
+            raise HTTPException(
+                409, "Run not complete"
+            ) from None
+        except ArtifactIntegrityError:
+            raise HTTPException(
+                503, "Artifact integrity check failed"
+            ) from None
+
+        return FileResponse(
+            path=artifact.path,
+            filename=artifact.filename,
+            media_type=artifact.media_type,
+            content_disposition_type="attachment",
+            headers={
+                "Cache-Control": "private, no-store",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
     return api
+
+
+@app.function(
+    image=image,
+    cpu=1,
+    memory=4096,
+    timeout=300,
+    volumes=volume_mount,
+)
+def verify_new_cloud_output():
+    import hashlib
+    import json
+    import nibabel as nib
+    import numpy as np
+
+    from app.backend.services.run_service import load_live_run
+    from app.backend.services.artifact_service import (
+        ARTIFACT_SPECS,
+        resolve_live_artifact,
+    )
+
+    run_id = "run_ee71bd9f95e755f7909f6011d0ef7410"
+    case_id = "case_6d362b430e614eb1a483f553aa234ba0"
+
+    runtime.reload()
+    record = load_live_run(run_id)
+
+    assert record.case_id == case_id
+    assert record.status == "complete"
+    assert set(record.artifacts) == set(ARTIFACT_SPECS)
+    print("PASS: All 11 approved artifacts declared")
+
+    for name in (
+        "baseline_probability",
+        "baseline_mask",
+        "final_mask",
+        "removal_mask",
+        "support_mask",
+    ):
+        npy = resolve_live_artifact(run_id, name + "_npy")
+        nii = resolve_live_artifact(run_id, name + "_nifti")
+
+        array_zyx = np.load(
+            npy.path, mmap_mode="r", allow_pickle=False
+        )
+        image_xyz = np.asarray(nib.load(nii.path).dataobj)
+
+        assert np.array_equal(
+            array_zyx, image_xyz.transpose(2, 1, 0)
+        ), f"{name}: NumPy/NIfTI mismatch"
+
+        print("PASS:", name, "NumPy ↔ NIfTI")
+
+    result_path = resolve_live_artifact(
+        run_id, "result_json"
+    ).path
+
+    result = json.loads(result_path.read_text())
+
+    assert result["run_id"] == record.run_id
+    assert result["case_id"] == record.case_id
+    assert result["action"] == record.action
+    assert result["gate_state"] == record.gate_state
+    assert result["sam_used"] == record.sam_used
+    print("PASS: Result JSON matches run record")
+
+    final_path = resolve_live_artifact(
+        run_id, "final_mask_npy"
+    ).path
+
+    final = np.load(final_path, allow_pickle=False)
+    digest = hashlib.sha256(
+        np.ascontiguousarray(
+            final, dtype=np.uint8
+        ).tobytes()
+    ).hexdigest()
+
+    print("FINAL MASK SHA256:", digest)
+    print("ACTION:", record.action)
+    print("GATE:", record.gate_state)
+    print("SAM USED:", record.sam_used)
+    print("BASELINE CHECKPOINT SHA256:",
+          result["baseline"]["checkpoint_sha256"])
+    print("SAM CHECKPOINT SHA256:",
+          result["sam"]["checkpoint_sha256"])
+    print("SAM SOURCE COMMIT:",
+          result["sam"]["source_commit"])
+
+    return {"verified": True, "mask_sha256": digest}
+
+
+@app.local_entrypoint()
+def verify_recent():
+    result = verify_new_cloud_output.remote()
+    assert result["verified"]
+    print("PASS: New cloud scientific output verified")

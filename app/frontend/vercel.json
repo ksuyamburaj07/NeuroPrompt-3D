@@ -38,6 +38,10 @@
       "destination": "/api/saved-runs?resource=list"
     },
     {
+      "source": "/api/v1/runs/:runId/artifacts/:artifactName",
+      "destination": "/api/run-artifact?runId=:runId&artifactName=:artifactName"
+    },
+    {
       "source": "/api/v1/runs/:runId",
       "destination": "/api/saved-runs?resource=run&runId=:runId"
     },
@@ -79,6 +83,9 @@
       "maxDuration": 60
     },
     "api/run-control.js": {
+      "maxDuration": 60
+    },
+    "api/run-artifact.js": {
       "maxDuration": 60
     }
   }
